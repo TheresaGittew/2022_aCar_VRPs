@@ -3,7 +3,6 @@ from gurobipy import Model, GRB, quicksum
 
 class PVRP_Formulation():
 
-
     # scenarios as a tuple with combination of # vehicles, relevant customers
     def __init__(self, input_params, next_scenario):
         self.cfg = input_params
