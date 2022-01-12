@@ -167,7 +167,7 @@ def find_demand_per_schedule(all_schedules_dict, customer_list, demands_entire_p
 
 
 
-class Config_Input():
+class Config_Input_PVRP():
 
     def __init__(self, R, T, P, C_p, a, b, demand, capa, E_r, c, coordinates, S):
         self.R_ids = list(R.keys())
@@ -186,10 +186,3 @@ class Config_Input():
         self.S = S
 
 
-class Scenario():
-
-    def __init__(self, number_vehicles, lower_bound, upper_bound, relevant_customers):
-        self.num_vecs = number_vehicles
-        self.lower_bound = lower_bound
-        self.upper_bound = upper_bound
-        self.C = relevant_customers

@@ -179,7 +179,7 @@ class MIP_FP_VRP():
         self.mp.Params.MIPGap = 0.001
         # self.mp.setParam('OutputFlag', 0)
         self.mp.optimize()
-
+        self.prep_output()
 
     def prep_output(self):
         if self.mp.Status == 3 or self.mp.Status == 4:

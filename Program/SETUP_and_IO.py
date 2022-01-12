@@ -149,6 +149,51 @@ def save_gurobi_res_in_excel(PVRP_obj, scenario, root_directory='Results'):
     writer.save()
     pass
 
+# list of resulting vars includes all decision variables
+# note that the order of the elements in list_of_resulting_vars has to match with the titles_keys_per_dec_var
+# so we assume we start with z, y, and q. Same holds for output tab names
+def save_gurobi_res_in_excel_fpvrp(list_result_vars, model_objVal, scenario,
+                                   root_directory='Results',
+                                   titles_keys_per_dec_var=(['Customer', 'Vehicle', 'Day'],
+                                                            ['O', 'D', 'Vehicle', 'Day'], ['Customer', 'Vehicle', 'Day']),
+                                    output_tab_names=('Z', 'Y', 'Q')):
+
+    def _aux_create_df(dictionary, title_of_indices):
+        df = pd.DataFrame.from_dict(dictionary, orient='index')
+        df.reset_index(level=0, inplace=True)
+        df[title_of_indices] = pd.DataFrame(df['index'].tolist(), index=df.index)
+        df.drop(columns=['index'],inplace=True)
+        df.rename(columns={0: 'Value'}, inplace=True)
+        df['Value'] = df['Value'].map(lambda x: x.X)
+        df = df[df['Value'] > 0.5]
+        return df
+
+    def _save_df_in_excel(df, excel_writer, tab_name):
+
+        df.to_excel(excel_writer, tab_name)
+        return
+
+    iterator_list_of_resulting_vars = iter(list_result_vars)
+    dfs_output_dec_vars = []
+
+    for indx_next_var in range(len(list_result_vars)):
+        next_dec_var = next(iterator_list_of_resulting_vars)
+        dfs_output_dec_vars.append(_aux_create_df(next_dec_var, titles_keys_per_dec_var[indx_next_var]))
+
+    # # create directory for given scenario
+    create_directory_for_scenario(scenario, root_directory=root_directory)
+    # new excel writer, using the given directory and the file name specified below
+    file_name = "ResultFile_ObjVal-"+str(model_objVal)+".xlsx"
+    relative_path_to_excel = get_path_for_scenario(scenario, root_directory) + file_name
+
+    writer = pd.ExcelWriter(relative_path_to_excel, engine='xlsxwriter')
+
+    for i in range(len(list_result_vars)):
+        _save_df_in_excel(dfs_output_dec_vars[i], writer, output_tab_names[i])
+
+    writer.save()
+    pass
+
 
 def save_gurobi_res_in_excel_with_services(PVRP_obj, scenario, root_directory='Results'):
 

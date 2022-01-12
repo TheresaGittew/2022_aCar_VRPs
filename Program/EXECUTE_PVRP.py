@@ -8,6 +8,9 @@ import PVRPS_Formulation as optimizer_s
 
 start_directory = '/home/sshrene/theresa/2022_aCar_VRPs'
 
+# test_path =
+# test_ cust
+
 path_demand_file = start_directory + '/GIS_Data/22-01-04_DEMANDS_7_DAYS.csv' # '/Users/theresawettig/PycharmProjects/2022_aCar_VRPs/GIS_Data/11-19-21_EXAMPLE_DemandList2.csv' # '/Users/theresawettig/PycharmProjects/2022_aCar_VRPs/GIS_Data/01-01-03_DemandList.csv' #/Users/theresawettig/PycharmProjects/2022_aCar_VRPs/GIS_Data/11-19-21_EXAMPLE_DemandList2.csv'
 path_OD_matrix = start_directory + '/GIS_Data/11-15-21_ODs.csv'
 coordinates = dp.read_coors(start_directory + '/GIS_Data/11-15-21_CoordinatesLongitudeLatitude.csv')
@@ -23,7 +26,7 @@ num_days = 6
 # scenario dependent data
 distances_lbs = 25
 distances_ubs = 100
-number_vehicles = 6
+number_vehicles = 3
 relevant_customers = dp.find_relevant_customers(od_matrix_as_dict, number_customers=25, min_distance_bekoji=distances_lbs, max_distance_bekoji=distances_ubs) #  [1,4,6,9,10,17,18,22]todo: improve method and overall procedure  #
 print("ACTIVE CUSTOMERS : " , relevant_customers)
 scenarios = [pv.Scenario(number_vehicles, distances_lbs, distances_ubs, relevant_customers)] # list of scenarios to analyze
@@ -71,7 +74,7 @@ for next_scenario in scenarios:
 
     # additionally neede
     demand = total_demands_nested_dict
-    input = pv.Config_Input(R, T, P, C_ps, a, b,  demand_per_schedule, capa_for_vrps, E_r, od_matrix_with_distances, coordinates , ['PNC', 'WDS'])
+    input = pv.Config_Input_PVRP(R, T, P, C_ps, a, b, demand_per_schedule, capa_for_vrps, E_r, od_matrix_with_distances, coordinates, ['PNC', 'WDS'])
 
     model = optimizer_s.PVRPS_Formulation(input, next_scenario)
     model.set_constraints()
