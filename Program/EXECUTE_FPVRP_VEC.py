@@ -9,7 +9,7 @@ import ScenarioClass as sc_definer
 test_file = '/Users/theresawettig/PycharmProjects/2022_aCar_VRPs/GIS_Data/11-19-21_EXAMPLE_DemandList2.csv'
 
 start_directory = '/Users/theresawettig/PycharmProjects/2022_aCar_VRPs'  # '/home/sshrene/theresa/2022_aCar_VRPs'
-path_demand_file =  start_directory + '/GIS_Data/22-01-04_DEMANDS_7_DAYS.csv' #  '/Users/theresawettig/PycharmProjects/2022_aCar_VRPs/GIS_Data/11-19-21_EXAMPLE_DemandList2.csv' # start_directory + '/GIS_Data/22-01-04_DEMANDS_7_DAYS.csv' # '/Users/theresawettig/PycharmProjects/2022_aCar_VRPs/GIS_Data/11-19-21_EXAMPLE_DemandList2.csv' # '/Users/theresawettig/PycharmProjects/2022_aCar_VRPs/GIS_Data/01-01-03_DemandList.csv' #/Users/theresawettig/PycharmProjects/2022_aCar_VRPs/GIS_Data/11-19-21_EXAMPLE_DemandList2.csv'
+path_demand_file = start_directory + '/GIS_Data/22-01-04_DEMANDS_7_DAYS.csv' #  '/Users/theresawettig/PycharmProjects/2022_aCar_VRPs/GIS_Data/11-19-21_EXAMPLE_DemandList2.csv' # start_directory + '/GIS_Data/22-01-04_DEMANDS_7_DAYS.csv' # '/Users/theresawettig/PycharmProjects/2022_aCar_VRPs/GIS_Data/11-19-21_EXAMPLE_DemandList2.csv' # '/Users/theresawettig/PycharmProjects/2022_aCar_VRPs/GIS_Data/01-01-03_DemandList.csv' #/Users/theresawettig/PycharmProjects/2022_aCar_VRPs/GIS_Data/11-19-21_EXAMPLE_DemandList2.csv'
 path_OD_matrix = start_directory + '/GIS_Data/11-15-21_ODs.csv'
 coordinates = dp.read_coors(start_directory + '/GIS_Data/11-15-21_CoordinatesLongitudeLatitude.csv')
 
@@ -21,7 +21,7 @@ capa = 25
 num_days = 5
 
 # scenario dependent data
-distances_lbs = 5
+distances_lbs = 20
 distances_ubs = 100
 number_vehicles = 7
 relevant_customers =   dp.find_relevant_customers(od_matrix_as_dict, number_customers=25, min_distance_bekoji=distances_lbs, max_distance_bekoji=distances_ubs) #  [1,4,6,9,10,17,18,22]todo: improve method and overall procedure  #

@@ -3,12 +3,9 @@ import PVRP_Preprocessing as pv
 import pandas as pd
 import math
 
-def get_path_for_scenario(scenario, root_directory):
+def get_path_str_for_scenario(scenario, root_directory):
     return root_directory  + '/Scenario_NumVec' + str(scenario.num_vecs) + '-LBs' \
                   + str(scenario.lower_bound) + '-UBs' + str(scenario.upper_bound)+'/'
-
-path_preprocessing = 'Results/Scenario_NumVec2-LBs35-UBs80/Preprocessing_Inputs.xlsx'
-path_results = 'Results/Scenario_NumVec2-LBs35-UBs80/DecisionvariableValues.xlsx'
 
 
 def get_path_for_scenario_results_file(scenario, name_file='DecisionvariableValues.xlsx', root_directory='Results'):
@@ -20,16 +17,15 @@ def get_path_for_scenario_preprocessing_file(scenario, name_file='Preprocessing_
     return root_directory +'/Scenario_NumVec' + str(scenario.num_vecs) + '-LBs' \
            + str(scenario.lower_bound) + '-UBs' + str(scenario.upper_bound) + '/'+name_file
 
+
 # creates a new folder for current run
 def create_directory_for_scenario(scenario, root_directory='Results'):
     plot_dir = os.path.dirname(__file__)
-    results_dir = os.path.join(plot_dir,  get_path_for_scenario(scenario, root_directory))
+    results_dir = os.path.join(plot_dir, get_path_str_for_scenario(scenario, root_directory))
 
     if not os.path.isdir(results_dir):
         os.makedirs(results_dir)
     return results_dir
-
-
 
 # uses existing folder for current scenario to save used input data
 def save_preprocessing_results_in_csv(R, P,  C_p, C_ps, demand, scenario, root_directory='Results'):
@@ -69,7 +65,7 @@ def save_preprocessing_results_in_csv(R, P,  C_p, C_ps, demand, scenario, root_d
 
     # # create new excel writer, using the given directory and the file name specified below
     file_name = "Preprocessing_Inputs.xlsx"
-    relative_path_to_excel =  get_path_for_scenario(scenario, root_directory) + file_name
+    relative_path_to_excel = get_path_str_for_scenario(scenario, root_directory) + file_name
     writer = pd.ExcelWriter(relative_path_to_excel, engine='xlsxwriter')
     #
     # # create new excel file
@@ -101,7 +97,7 @@ def get_preprocessing_results_from_csv(scenario, root_directory='Results'):
     col_names = ['RouteId', 'ScheduleId', 'Customer']
 
     file_name = "Preprocessing_Inputs.xlsx"
-    relative_path_to_excel =  get_path_for_scenario(scenario, root_directory) + file_name
+    relative_path_to_excel = get_path_str_for_scenario(scenario, root_directory) + file_name
 
     R = _aux_create_dict_from_excel(tab_names_default[0], col_names[0], relative_path_to_excel)
     P = _aux_create_dict_from_excel(tab_names_default[1], col_names[1], relative_path_to_excel)
@@ -140,7 +136,7 @@ def save_gurobi_res_in_excel(PVRP_obj, scenario, root_directory='Results'):
 
     # # create new excel writer, using the given directory and the file name specified below
     file_name = "DecisionvariableValues.xlsx"
-    relative_path_to_excel = get_path_for_scenario(scenario, root_directory) + file_name
+    relative_path_to_excel = get_path_str_for_scenario(scenario, root_directory) + file_name
     writer = pd.ExcelWriter(relative_path_to_excel, engine='xlsxwriter')
 
     for i in range(len(output_dec_vars)):
@@ -184,7 +180,7 @@ def save_gurobi_res_in_excel_fpvrp(list_result_vars, model_objVal, scenario,
     create_directory_for_scenario(scenario, root_directory=root_directory)
     # new excel writer, using the given directory and the file name specified below
     file_name = "ResultFile_ObjVal-"+str(model_objVal)+".xlsx"
-    relative_path_to_excel = get_path_for_scenario(scenario, root_directory) + file_name
+    relative_path_to_excel = get_path_str_for_scenario(scenario, root_directory) + file_name
 
     writer = pd.ExcelWriter(relative_path_to_excel, engine='xlsxwriter')
 
@@ -227,7 +223,7 @@ def save_gurobi_res_in_excel_with_services(PVRP_obj, scenario, root_directory='R
 
     # # create new excel writer, using the given directory and the file name specified below
     file_name = "DecisionvariableValues.xlsx"
-    relative_path_to_excel = get_path_for_scenario(scenario, root_directory) + file_name
+    relative_path_to_excel = get_path_str_for_scenario(scenario, root_directory) + file_name
     writer = pd.ExcelWriter(relative_path_to_excel, engine='xlsxwriter')
 
     for i in range(len(output_dec_vars)):
@@ -316,8 +312,6 @@ def create_table_day_to_routes(x_df):
     return dict_day_to_routes, df_day_to_routes
 
 
-#
-
 
 
 def get_visited_customers_per_day_rtd_and_service(x_df, y_dict, h_df, S, path_preprocessing):
@@ -380,6 +374,7 @@ def _get_loads_for_day_and_route_id(day, route_id, visited_customer_per_day, y_d
     dict_visited_custs_to_route_demands = dict((i, df_customer_schedid_to_demand.loc[(i, y_dict[i])]['PNC']) for i in visited_custs_on_route)
     return dict_visited_custs_to_route_demands
 
+
 def _get_loads_for_day_and_route_id_services(day, route_id, vehicle, service, visited_customer_per_day, y_dict, df_customer_schedid_to_demand):
     visited_custs_on_route = visited_customer_per_day[vehicle, day, route_id, service]
     dict_visited_custs_to_route_demands = dict((i, df_customer_schedid_to_demand.loc[(i, y_dict[i, service])][service]) for i in visited_custs_on_route)
@@ -436,6 +431,36 @@ def get_loads_for_day_route_and_service_meta(path_preprocessing, path_results):
     return dict_day_routeid_to_loads
 
 
+class ExcelIO:
+    # directory refers to the general directory (e.g. "Results_FPVRPS"), not the individual folder for each scenario
+    # the scenario folder might still be added
+
+    def __init__(self, meta_directory, scenario):
+        self.scenario = scenario
+        self.directory = meta_directory
+        # path_to_scenario = get_path_str_for_scenario(root_directory=self.directory, scenario=self.scenario)
+
+    # dec var names should match with names of tabs of excel file
+    def get_results_from_excel_to_df(self, dec_var_names=('Z','Y','Q'), dec_var_columns=([ 'Customer', 'Vehicle', 'Day'],
+                                                                                          ['O', 'D', 'Vehicle', 'Day'],
+                                                                                          ['Value', 'Customer', 'Vehicle', 'Day']),
+                                            name_results_file='ResultFile.xlsx'):
+        path_results = get_path_for_scenario_results_file(self.scenario,
+                                                          name_file=name_results_file, root_directory=self.directory)
+        print(path_results)
+
+        it_dec_var_names=iter(dec_var_names)
+        dict_decvar_str_to_df = {}
+        for i in range(len(dec_var_names)):
+            next_var_str = it_dec_var_names.__next__()
+            # print("are here")
+
+            next_df = pd.read_excel(path_results, sheet_name=next_var_str)
+            print(next_df)
+            next_df = next_df[dec_var_columns[i]]
+            dict_decvar_str_to_df[dec_var_names[i]] = next_df
+
+        return dict_decvar_str_to_df
 
 # dict_day_routeid_to_loads = get_loads_for_day_and_route_meta(path_preprocessing, path_results)
 # print("Resulting loads" , dict_day_routeid_to_loads)
@@ -443,6 +468,7 @@ def get_loads_for_day_route_and_service_meta(path_preprocessing, path_results):
 #
 #     #reader_routes = reader_routes.to_dict(orient='index')
 #      #print(reader_routes)
+
 
 ' idea: create two dataframes: '
 ' one with current day for route to current route id'

@@ -14,7 +14,7 @@ class PVRP_Vizualizer():
         self.scenario = pvrp_model.scenario
         self.path_results = path_results
         self.path_preprocessing = path_preprocessing
-        self.path_for_saving = stp_io.get_path_for_scenario(self.scenario, root_directory=root_directory_for_saving)
+        self.path_for_saving = stp_io.get_path_str_for_scenario(self.scenario, root_directory=root_directory_for_saving)
 
         self.mp = pvrp_model
         self.cfg_inputs = pvrp_model.cfg
