@@ -5,8 +5,8 @@ from itertools import cycle
 import SETUP_and_IO as stp_io
 
 
-path_results = 'Results/Scenario_NumVec2-LBs35-UBs80/DecisionvariableValues.xlsx'
-path_preprocessing = 'Results/Scenario_NumVec2-LBs35-UBs80/Preprocessing_Inputs.xlsx'
+path_results = '../Results/Scenario_NumVec2-LBs35-UBs80/DecisionvariableValues.xlsx'
+path_preprocessing = '../Results/Scenario_NumVec2-LBs35-UBs80/Preprocessing_Inputs.xlsx'
 
 class PVRP_Vizualizer():
 

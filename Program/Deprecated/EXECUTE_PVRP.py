@@ -90,7 +90,7 @@ for next_scenario in scenarios:
 
 
     vizualizer = vizualizer.PVRP_Vizualizer(path_preprocessing=stp.get_path_for_scenario_preprocessing_file(next_scenario, 'Preprocessing_Inputs.xlsx','Results_PVRPS'),
-                                           path_results=stp.get_path_for_scenario_results_file(next_scenario, name_file='DecisionvariableValues.xlsx', root_directory='Results_PVRPS'), root_directory_for_saving='Results_PVRPS', pvrp_model=model)
+                                            path_results_grb=stp.get_path_for_scenario_results_file(next_scenario, name_file='DecisionvariableValues.xlsx', root_directory='Results_PVRPS'), root_directory_for_saving='Results_PVRPS', gurobi_model=model)
     vizualizer.plot_routes(method_for_getting_routes=vizualizer.get_next_day_routes_from_h)
 
 

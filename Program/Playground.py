@@ -1,6 +1,4 @@
-import itertools
-from Program import DEPR_ReadNilsInputFiles as dp
-from Program import SETUP_and_IO as setio
+from Program.Deprecated import DEPR_ReadNilsInputFiles as dp, SETUP_and_IO as setio
 
 A = ['Ernie', 'Bert', 'Bibo']
 B = ['green', 'yellow', 'blue']
@@ -22,7 +20,7 @@ res = list(pd_x.query('Day == ' + str(2))['RouteId'])
 print(res)
 
 
-self.mp.setObjective(
+self.fpvrp_obj.setObjective(
             sum(sum(sum(self.x[r, t] * self.cfg.c[i, j] for (i, j) in self.cfg.E_r[r]) for r in self.cfg.R_ids) for t in self.cfg.T))
 
 1368
