@@ -5,6 +5,10 @@ import gurobipy
 import pandas as pd
 import math
 
+def get_path_str_for_scenario(scenario, root_directory):
+    return root_directory  + '/Scenario_NumVec' + str(scenario.num_vecs) + '-LBs' \
+                  + str(scenario.lower_bound) + '-UBs' + str(scenario.upper_bound)+'/'
+
 
 class IOExcel:
 
@@ -58,13 +62,13 @@ class IOExcel:
 
         # #
         # Step 2: save results in Excel file
-        self.save_df_res_in_excel(dfs_output_dec_vars, model_objVal, self.title_excel_to_create_or_read)
+        self.save_df_res_in_excel(dfs_output_dec_vars, model_objVal)
 
-    def save_df_res_in_excel(self, dfs_output_dec_vars, objVal, excel_file_name):
+    def save_df_res_in_excel(self, dfs_output_dec_vars, objVal):
 
         # #
         #   Write the panda dataframes into excel file
-        self.path_to_excel_file = self.path_to_scenario_folder_str + excel_file_name
+        self.path_to_excel_file = self.path_to_scenario_folder_str + self.title_excel_to_create_or_read
         writer = pd.ExcelWriter(self.path_to_excel_file, engine='xlsxwriter')
         for i in range(len(dfs_output_dec_vars)):
             dfs_output_dec_vars[i].to_excel(writer, self.output_tab_names[i])

@@ -1,8 +1,6 @@
 # Methods for checking if routes are valid
 import SETUP_and_IO as stp_io
-import ScenarioClass as scenario_creator
-import DEPR_ReadNilsInputFiles   as dp
-import pandas as pd
+
 
 class RouteValidation():
     def __init__(self, arc_li):
@@ -71,10 +69,10 @@ class RouteValidation():
             return built_arcs, faulty_arc_list_rest
         else:
             built_arcs.append(next_link)
-            print("HERE WITH ", faulty_arc_list_rest,  "built arcs " , built_arcs, "next elem to add: ", next_link)
+            # print("HERE WITH ", faulty_arc_list_rest,  "built arcs " , built_arcs, "next elem to add: ", next_link)
             if next_link in faulty_arc_list_rest: faulty_arc_list_rest.remove(next_link)
             next_link = next(filter(lambda x: x[0] == next_link[1], faulty_arc_list_rest), None)
-            print("Next link: ", next_link)
+            # print("Next link: ", next_link)
             return self._find_main_route(faulty_arc_list_rest, built_arcs, next_link)
 
 
@@ -86,7 +84,7 @@ class RouteValidation():
         built_arcs, faulty_arc_list_rest = self._find_main_route(self.arc_li, [],  hub_leaving_link)
         if not faulty_arc_list_rest:
             return built_arcs + [(built_arcs[-1][1], 0)]
-        print("built arcs", built_arcs, " faulty_arc_list_rest", faulty_arc_list_rest)
+        # print("built arcs", built_arcs, " faulty_arc_list_rest", faulty_arc_list_rest)
         built_arcs[-1] = built_arcs[-1][0], faulty_arc_list_rest[0][0] # replace last destination in built list with first origin in remaining list
         final_route = self._aux_integrate_missing_elems(faulty_arc_list_rest, built_arcs, built_arcs[-1][1])
         return final_route
@@ -138,59 +136,82 @@ print(r._aux_integrate_missing_elems([(14,13),(13,14),(9,10),(10,9)], [(0,1),(1,
 
 class FPVRPPostProcessor():
 
-    def __init__(self, meta_directory, scenario, distances, dec_var_names=('Z','Y','Q'), dec_var_indices_names=([ 'Customer', 'Vehicle', 'Day'],
+    def __init__(self, path_to_gurobi_result, scenario, cfg, dec_var_names=('Z','Y','Q'), dec_var_indices_names=([ 'Customer', 'Vehicle', 'Day'],
                                                                                           ['O', 'D', 'Vehicle', 'Day'],
-                                                                                          ['Value', 'Customer', 'Vehicle', 'Day'])):
-        self.meta_directory = meta_directory
+                                                                                          ['Value', 'Customer', 'Vehicle', 'Day','ServiceType'])):
+        self.path_to_gurobi_result = path_to_gurobi_result
         self.scenario = scenario
-        self.distances = distances
+        self.T = cfg.T
 
         # default
         self.dec_var_names = dec_var_names
         self.dec_var_indices_names = dec_var_indices_names
-        self.route_distances = distances
 
+        # automatically triggered methods
+        self._read_results()
+        self._convert_result_format()
 
-    def read_results(self):
-        excelio = stp_io.ExcelIO(self.meta_directory, self.scenario)
-        self.dict_decvarstr_to_df = excelio.get_results_from_excel_to_df(self.dec_var_names, self.dec_var_indices_names, 'ResultFile.xlsx') # default parameters are already given, correspond to tab names of excel file and the column names that are relevant
+    def _read_results(self):
+        excelio = stp_io.ExcelIO(self.path_to_gurobi_result)
+        self.dict_decvarstr_to_df = excelio.get_results_from_excel_to_df(self.dec_var_names, self.dec_var_indices_names) # default parameters are already given, correspond to tab names of excel file and the column names that are relevant
 
-    def convert_result_format(self):
-        self._transform_results_to_dict()
+    def _convert_result_format(self):
+        self._transform_df_results_to_dict()
         self._transform_y_to_dict_vehicle_day_to_arclist()
+        self._transform_q_to_dict_customer_vehicle_day_to_quantity()
 
     def get_vehicle_day_to_route_dict(self):
         return self.vehicle_day_to_arcs
 
+    def get_dict_decvar_to_vehicleday(self):
+        return self.dict_decvarstr_to_dict_vehicleday_to_val
+
     def _create_next_inner_dict(self, df):
+
         dict_vehicleday_to_routes = {}
         for k in self.scenario.K:
-            for t in range(self.scenario.T):
+            for t in (self.T):
                 results = list(df.query('Vehicle ==' + str(k) + ' and Day == ' + str(t)).values.tolist())
-                #print("Next results , ", results)
+
                 dict_vehicleday_to_routes[k,t] = results
+        #print("Are in  next inner dict", dict_vehicleday_to_routes)
         return dict_vehicleday_to_routes
+
+    def _transform_q_to_dict_customer_vehicle_day_to_quantity(self, relevant_tab='Q'):
+        self.dict_customer_vec_day_to_q = {}
+        for k, v in self.dict_decvarstr_to_dict_vehicleday_to_val[relevant_tab].items():
+            # v looks like this: [[25.0, 14, 0, 0, 'PNC'], [61.8, 14, 0, 0, 'WDS'], [82.6, 15, 0, 0, 'WDS']]
+            for i in v:
+                vehicle, day = k
+                print(i)
+                customer = i[1]
+                service_type = i[4]
+                self.dict_customer_vec_day_to_q[customer, vehicle, day, service_type] = i[0]  # eg, remove the other elements like (k, t)-columns
+
+    def get_dict_customer_vec_day_to_q(self):
+        return self.dict_customer_vec_day_to_q
 
     def _transform_y_to_dict_vehicle_day_to_arclist(self, relevant_tab='Y'):
         self.vehicle_day_to_arcs = {}
-        for k, v in self.dict_decvarstr_to_vehicledaydict[relevant_tab].items():
-            print(v)
+        for k, v in self.dict_decvarstr_to_dict_vehicleday_to_val[relevant_tab].items():
+            # print(v)
             self.vehicle_day_to_arcs[k] = [(i[0], i[1]) for i in v] # eg, remove the other elements like (k, t)-columns
 
-    def _transform_results_to_dict(self):
-        self.dict_decvarstr_to_vehicledaydict = {}
+    def _transform_df_results_to_dict(self):
+        self.dict_decvarstr_to_dict_vehicleday_to_val = {}
         iter_dec_var_names = iter(self.dec_var_names)
         next_df_str = next(iter_dec_var_names, None)
         while next_df_str:
-            self.dict_decvarstr_to_vehicledaydict[next_df_str] = self._create_next_inner_dict(self.dict_decvarstr_to_df[next_df_str])
+            #print(next_df_str)
+            self.dict_decvarstr_to_dict_vehicleday_to_val[next_df_str] = self._create_next_inner_dict(self.dict_decvarstr_to_df[next_df_str])
             next_df_str = next(iter_dec_var_names, None)
 
         #print(self.dict_decvarstr_to_vehicledaydict)
-        return self.dict_decvarstr_to_vehicledaydict
+        return self.dict_decvarstr_to_dict_vehicleday_to_val
 
-    def get_faulty_routes(self, relevant_var='Y'):
+    def _get_faulty_routes(self, relevant_var='Y'):
         self.faulty_routes = []
-        for k, v in self.dict_decvarstr_to_vehicledaydict[relevant_var].items():
+        for k, v in self.dict_decvarstr_to_dict_vehicleday_to_val[relevant_var].items():
             res = RouteValidation(v).get_status()
             if not res:
                 self.faulty_routes.append((k, v))
@@ -198,35 +219,35 @@ class FPVRPPostProcessor():
         return self.faulty_routes
 
 
-    def get_additional_costs_through_cor_route(self, faulty_route, new_route):
+    def _get_additional_costs_through_cor_route(self, faulty_route, new_route):
         costs_old = sum([self.distances[i,j] for i,j in faulty_route])
         costs_new = sum([self.distances[i,j] for i,j in new_route])
         return  costs_new - costs_old
 
-    def correct_faulty_routes(self, relevant_var = 'Y'):
+    def _correct_faulty_routes(self, relevant_var ='Y'):
         self.additional_distance_after_adjust = 0
         y_dict = self.vehicle_day_to_arcs
         for (k, d), route in self.faulty_routes:
             faulty_route = y_dict[k, d]
             corrected_route = RouteValidation(faulty_route).correct_faulty_routes()
-            self.additional_distance_after_adjust += self.get_additional_costs_through_cor_route(faulty_route, corrected_route)
+            self.additional_distance_after_adjust += self._get_additional_costs_through_cor_route(faulty_route, corrected_route)
             y_dict[k, d] = corrected_route
         print("** Done ** \n ")
-        self.dict_decvarstr_to_vehicledaydict[relevant_var] = y_dict
-        print(self.vehicle_day_to_arcs)
+        self.dict_decvarstr_to_dict_vehicleday_to_val[relevant_var] = y_dict
+        #print(self.vehicle_day_to_arcs)
 
     def get_distance(self):
         return self.additional_distance_after_adjust
 
-    def read_results_and_adjust_routes(self):
-        self.read_results()
-        self.convert_result_format()
-        self.get_vehicle_day_to_route_dict()
-        self.get_faulty_routes()
-        self.correct_faulty_routes()  # 6,1 is a faulty route
-        return self.vehicle_day_to_arcs, self.additional_distance_after_adjust
+    def correct_routes(self, distances):
+        self.distances = distances
+        self._get_faulty_routes()
+        self._correct_faulty_routes()  # 6,1 is a faulty route
+        o_d_vec_day = self._convert_new_y_for_excel()
+        return self.vehicle_day_to_arcs, self.additional_distance_after_adjust, o_d_vec_day
 
-    def convert_new_y_for_excel(self):
+
+    def _convert_new_y_for_excel(self):
         # method converts the transformed y's back into a format that is suitable for storing in an excel
         o_d_vec_day = {}
         for key, arc_list in self.vehicle_day_to_arcs.items():
@@ -238,19 +259,22 @@ class FPVRPPostProcessor():
         return o_d_vec_day
 
 
-
-
-scenario = scenario_creator.Scenario(7,20,100,[0,1,2,3],5)
-# path_results = stp_io.get_path_for_scenario_results_file(scenario,
-#                                                           name_file='ResultFile.xlsx', root_directory='/Users/theresawettig/PycharmProjects/2022_aCar_VRPs/Program/Results_FPVRPS')
-start_directory = '/Users/theresawettig/PycharmProjects/2022_aCar_VRPs'  # '/home/sshrene/theresa/2022_aCar_VRPs'
-
-path_OD_matrix = start_directory + '/GIS_Data/11-15-21_ODs.csv'
-coordinates = dp.read_coors(start_directory + '/GIS_Data/11-15-21_CoordinatesLongitudeLatitude.csv')
+# # Todo : All this has to go into the execution file
+# scenario = scenario_creator.Scenario(7,20,100,[0,1,2,3],5)
+# # path_results = stp_io.get_path_for_scenario_results_file(scenario,
+# #                                                           name_file='ResultFile.xlsx', root_directory='/Users/theresawettig/PycharmProjects/2022_aCar_VRPs/Program/Results_FPVRPS')
+# start_directory = '/Users/theresawettig/PycharmProjects/2022_aCar_VRPs'  # '/home/sshrene/theresa/2022_aCar_VRPs'
 #
-od_matrix_as_dict = dp.read_odmatrix(path_OD_matrix)
-od_matrix_with_distances = dict((k, od_matrix_as_dict[k][1]) for k in od_matrix_as_dict.keys())
-
-
-
-#check_if_route_correct([(1,2),(2,3), (3,0)])
+# path_OD_matrix = start_directory + '/GIS_Data/11-15-21_ODs.csv'
+# coordinates = dp.read_coors(start_directory + '/GIS_Data/11-15-21_CoordinatesLongitudeLatitude.csv')
+# #
+# od_matrix_as_dict = dp.read_odmatrix(path_OD_matrix)
+# od_matrix_with_distances = dict((k, od_matrix_as_dict[k][1]) for k in od_matrix_as_dict.keys())
+#
+# pp = FPVRPPostProcessor('/Users/theresawettig/PycharmProjects/2022_aCar_VRPs'+'/Program/Results_FPVRPS',scenario,od_matrix_with_distances)
+# vehicle_day_to_arcs, additional_distance_after_adjust, o_d_vec_day = pp.read_results_and_adjust_routes()
+#
+# print(" + + + Are here + + + + + " )
+# stp_io.save_gurobi_res_in_excel_fpvrp([o_d_vec_day], additional_distance_after_adjust, scenario, root_directory='Results_FPVRPS',
+#                                       titles_keys_per_dec_var=[['O', 'D', 'Vehicle', 'Day']], output_tab_names=('Z') , from_gurobi=False)
+# #check_if_route_correct([(1,2),(2,3), (3,0)])

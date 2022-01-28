@@ -1,11 +1,10 @@
 import os
-import PVRP_Preprocessing as pv
+
+import gurobipy
+
 import pandas as pd
 import math
 
-def get_path_str_for_scenario(scenario, root_directory):
-    return root_directory  + '/Scenario_NumVec' + str(scenario.num_vecs) + '-LBs' \
-                  + str(scenario.lower_bound) + '-UBs' + str(scenario.upper_bound)+'/'
 
 
 def get_path_for_scenario_results_file(scenario, name_file='DecisionvariableValues.xlsx', root_directory='Results'):
@@ -19,13 +18,13 @@ def get_path_for_scenario_preprocessing_file(scenario, name_file='Preprocessing_
 
 
 # creates a new folder for current run
-def create_directory_for_scenario(scenario, root_directory='Results'):
-    plot_dir = os.path.dirname(__file__)
-    results_dir = os.path.join(plot_dir, get_path_str_for_scenario(scenario, root_directory))
-
-    if not os.path.isdir(results_dir):
-        os.makedirs(results_dir)
-    return results_dir
+# def create_directory_for_scenario(scenario, root_directory='Results'):
+#     plot_dir = os.path.dirname(__file__)
+#     results_dir = os.path.join(plot_dir, get_path_str_for_scenario(scenario, root_directory))
+#
+#     if not os.path.isdir(results_dir):
+#         os.makedirs(results_dir)
+#     return results_dir
 
 # uses existing folder for current scenario to save used input data
 def save_preprocessing_results_in_csv(R, P,  C_p, C_ps, demand, scenario, root_directory='Results'):
@@ -148,19 +147,21 @@ def save_gurobi_res_in_excel(PVRP_obj, scenario, root_directory='Results'):
 # list of resulting vars includes all decision variables
 # note that the order of the elements in list_of_resulting_vars has to match with the titles_keys_per_dec_var
 # so we assume we start with z, y, and q. Same holds for output tab names
-def save_gurobi_res_in_excel_fpvrp(list_result_vars, model_objVal, scenario,
-                                   root_directory='Results',
+def save_gurobi_res_in_excel_fpvrp(list_result_vars, model_objVal,
+                                   relative_path_to_excel,
                                    titles_keys_per_dec_var=(['Customer', 'Vehicle', 'Day'],
-                                                            ['O', 'D', 'Vehicle', 'Day'], ['Customer', 'Vehicle', 'Day']),
-                                    output_tab_names=('Z', 'Y', 'Q')):
-
+                                                            ['O', 'D', 'Vehicle', 'Day'], ['Customer', 'Vehicle', 'Day', 'ServiceType']),
+                                    output_tab_names=('Z', 'Y', 'Q'), from_gurobi=True):
+    # print("titels keys per dict ", titles_keys_per_dec_var)
     def _aux_create_df(dictionary, title_of_indices):
+        #print("current dict: " , " title of ind", title_of_indices)
         df = pd.DataFrame.from_dict(dictionary, orient='index')
         df.reset_index(level=0, inplace=True)
+        #print(df['index'])
         df[title_of_indices] = pd.DataFrame(df['index'].tolist(), index=df.index)
         df.drop(columns=['index'],inplace=True)
         df.rename(columns={0: 'Value'}, inplace=True)
-        df['Value'] = df['Value'].map(lambda x: x.X)
+        if isinstance(df['Value'][0], gurobipy.Var) : df['Value'] = df['Value'].map(lambda x: x.X)
         df = df[df['Value'] > 0.5]
         return df
 
@@ -176,22 +177,17 @@ def save_gurobi_res_in_excel_fpvrp(list_result_vars, model_objVal, scenario,
         next_dec_var = next(iterator_list_of_resulting_vars)
         dfs_output_dec_vars.append(_aux_create_df(next_dec_var, titles_keys_per_dec_var[indx_next_var]))
 
-    # # create directory for given scenario
-    create_directory_for_scenario(scenario, root_directory=root_directory)
-    # new excel writer, using the given directory and the file name specified below
-    file_name = "ResultFile_ObjVal-"+str(model_objVal)+".xlsx"
-    relative_path_to_excel = get_path_str_for_scenario(scenario, root_directory) + file_name
-
     writer = pd.ExcelWriter(relative_path_to_excel, engine='xlsxwriter')
 
     for i in range(len(list_result_vars)):
         _save_df_in_excel(dfs_output_dec_vars[i], writer, output_tab_names[i])
 
+    pd.DataFrame([model_objVal]).to_excel(writer, 'objVal')
     writer.save()
     pass
 
 
-def save_gurobi_res_in_excel_with_services(PVRP_obj, scenario, root_directory='Results'):
+def save_gurobi_res_in_excel_with_services(PVRP_obj, scenario, relative_path_to_excel):
 
     def _aux_create_df(dictionary, title_of_indices):
 
@@ -222,8 +218,7 @@ def save_gurobi_res_in_excel_with_services(PVRP_obj, scenario, root_directory='R
         dfs_output_dec_vars.append(_aux_create_df(output_dec_vars[v], titles_of_keys_per_dec_var[v]))
 
     # # create new excel writer, using the given directory and the file name specified below
-    file_name = "DecisionvariableValues.xlsx"
-    relative_path_to_excel = get_path_str_for_scenario(scenario, root_directory) + file_name
+
     writer = pd.ExcelWriter(relative_path_to_excel, engine='xlsxwriter')
 
     for i in range(len(output_dec_vars)):
@@ -435,19 +430,15 @@ class ExcelIO:
     # directory refers to the general directory (e.g. "Results_FPVRPS"), not the individual folder for each scenario
     # the scenario folder might still be added
 
-    def __init__(self, meta_directory, scenario):
-        self.scenario = scenario
-        self.directory = meta_directory
+    def __init__(self, path_to_grb_result_excel):
+        self.path_to_excel = path_to_grb_result_excel
         # path_to_scenario = get_path_str_for_scenario(root_directory=self.directory, scenario=self.scenario)
 
     # dec var names should match with names of tabs of excel file
     def get_results_from_excel_to_df(self, dec_var_names=('Z','Y','Q'), dec_var_columns=([ 'Customer', 'Vehicle', 'Day'],
                                                                                           ['O', 'D', 'Vehicle', 'Day'],
-                                                                                          ['Value', 'Customer', 'Vehicle', 'Day']),
-                                            name_results_file='ResultFile.xlsx'):
-        path_results = get_path_for_scenario_results_file(self.scenario,
-                                                          name_file=name_results_file, root_directory=self.directory)
-        print(path_results)
+                                                                                          ['Value', 'Customer', 'Vehicle', 'Day'])):
+
 
         it_dec_var_names=iter(dec_var_names)
         dict_decvar_str_to_df = {}
@@ -455,8 +446,7 @@ class ExcelIO:
             next_var_str = it_dec_var_names.__next__()
             # print("are here")
 
-            next_df = pd.read_excel(path_results, sheet_name=next_var_str)
-            print(next_df)
+            next_df = pd.read_excel(self.path_to_excel, sheet_name=next_var_str)
             next_df = next_df[dec_var_columns[i]]
             dict_decvar_str_to_df[dec_var_names[i]] = next_df
 
@@ -485,6 +475,7 @@ class ExcelIO:
 #                                                                        path_preprocessing)
 #
 #     pass
+
 
 
 # mapping_dict = {'A':['a', 'b', 'c', 'd'], 'B':['aa', 'bb', 'cc']}

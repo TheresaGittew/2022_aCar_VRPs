@@ -1,5 +1,4 @@
 # Methods for checking if routes are valid
-import SETUP_and_IO as stp_io
 from itertools import product
 import pandas as pd
 
@@ -146,63 +145,61 @@ class FPVRPPostProcessor():
 
 
 
+    #
+    # def get_vehicle_day_to_route_dict(self):
+    #     return self.vehicle_day_to_arcs
+    #
+    # def get_dict_decvar_to_vehicleday(self):
+    #     return self.dict_decvarstr_to_dict_vehicleday_to_val
 
-    def get_vehicle_day_to_route_dict(self):
-        return self.vehicle_day_to_arcs
+    # def _create_next_inner_dict(self, df):
+    #
+    #     dict_vehicleday_to_routes = {}
+    #     for k in self.scenario.K:
+    #         for t in (self.T):
+    #             results = list(df.query('Vehicle ==' + str(k) + ' and Day == ' + str(t)).values.tolist())
+    #
+    #             dict_vehicleday_to_routes[k,t] = results
+    #     #print("Are in  next inner dict", dict_vehicleday_to_routes)
+    #     return dict_vehicleday_to_routes
 
-    def get_dict_decvar_to_vehicleday(self):
-        return self.dict_decvarstr_to_dict_vehicleday_to_val
+    # def _transform_q_to_dict_customer_vehicle_day_to_quantity(self, relevant_tab='Q'):
+    #     self.dict_customer_vec_day_to_q = {}
+    #     for k, v in self.dict_decvarstr_to_dict_vehicleday_to_val[relevant_tab].items():
+    #         # v looks like this: [[25.0, 14, 0, 0, 'PNC'], [61.8, 14, 0, 0, 'WDS'], [82.6, 15, 0, 0, 'WDS']]
+    #         for i in v:
+    #             vehicle, day = k
+    #             print(i)
+    #             customer = i[1]
+    #             service_type = i[4]
+    #             self.dict_customer_vec_day_to_q[customer, vehicle, day, service_type] = i[0]  # eg, remove the other elements like (k, t)-columns
+    #
+    # def get_dict_customer_vec_day_to_q(self):
+    #     return self.dict_customer_vec_day_to_q
+    #
+    # def _transform_y_to_dict_vehicle_day_to_arclist(self, relevant_tab='Y'):
+    #     self.vehicle_day_to_arcs = {}
+    #     for k, v in self.dict_decvarstr_to_dict_vehicleday_to_val[relevant_tab].items():
+    #         # print(v)
+    #         self.vehicle_day_to_arcs[k] = [(i[0], i[1]) for i in v] # eg, remove the other elements like (k, t)-columns
 
-    def _create_next_inner_dict(self, df):
-
-        dict_vehicleday_to_routes = {}
-        for k in self.scenario.K:
-            for t in (self.T):
-                results = list(df.query('Vehicle ==' + str(k) + ' and Day == ' + str(t)).values.tolist())
-
-                dict_vehicleday_to_routes[k,t] = results
-        #print("Are in  next inner dict", dict_vehicleday_to_routes)
-        return dict_vehicleday_to_routes
-
-    def _transform_q_to_dict_customer_vehicle_day_to_quantity(self, relevant_tab='Q'):
-        self.dict_customer_vec_day_to_q = {}
-        for k, v in self.dict_decvarstr_to_dict_vehicleday_to_val[relevant_tab].items():
-            # v looks like this: [[25.0, 14, 0, 0, 'PNC'], [61.8, 14, 0, 0, 'WDS'], [82.6, 15, 0, 0, 'WDS']]
-            for i in v:
-                vehicle, day = k
-                print(i)
-                customer = i[1]
-                service_type = i[4]
-                self.dict_customer_vec_day_to_q[customer, vehicle, day, service_type] = i[0]  # eg, remove the other elements like (k, t)-columns
-
-    def get_dict_customer_vec_day_to_q(self):
-        return self.dict_customer_vec_day_to_q
-
-    def _transform_y_to_dict_vehicle_day_to_arclist(self, relevant_tab='Y'):
-        self.vehicle_day_to_arcs = {}
-        for k, v in self.dict_decvarstr_to_dict_vehicleday_to_val[relevant_tab].items():
-            # print(v)
-            self.vehicle_day_to_arcs[k] = [(i[0], i[1]) for i in v] # eg, remove the other elements like (k, t)-columns
-
-    def _transform_df_results_to_dict(self):
-        self.dict_decvarstr_to_dict_vehicleday_to_val = {}
-        iter_dec_var_names = iter(self.dec_var_names)
-        next_df_str = next(iter_dec_var_names, None)
-        while next_df_str:
-            #print(next_df_str)
-            self.dict_decvarstr_to_dict_vehicleday_to_val[next_df_str] = self._create_next_inner_dict(self.dict_decvarstr_to_df[next_df_str])
-            next_df_str = next(iter_dec_var_names, None)
-
-        #print(self.dict_decvarstr_to_vehicledaydict)
-        return self.dict_decvarstr_to_dict_vehicleday_to_val
+    # def _transform_df_results_to_dict(self):
+    #     self.dict_decvarstr_to_dict_vehicleday_to_val = {}
+    #     iter_dec_var_names = iter(self.dec_var_names)
+    #     next_df_str = next(iter_dec_var_names, None)
+    #     while next_df_str:
+    #         #print(next_df_str)
+    #         self.dict_decvarstr_to_dict_vehicleday_to_val[next_df_str] = self._create_next_inner_dict(self.dict_decvarstr_to_df[next_df_str])
+    #         next_df_str = next(iter_dec_var_names, None)
+    #
+    #     #print(self.dict_decvarstr_to_vehicledaydict)
+    #     return self.dict_decvarstr_to_dict_vehicleday_to_val
 
     def _get_faulty_routes(self, relevant_var='Y'):
 
         df_y = self.grb_results_pd_dfs[relevant_var]
         self.faulty_routes = {}
-        print(list(product(self.scenario.K, self.T)))
         for (k, d) in product(self.scenario.K, self.T):
-            print(" + +NEXT + + ")
             try:
                 my_index = (slice(None), slice(None), k, d)
                 df_sub = df_y.loc[(my_index),:]
@@ -212,9 +209,9 @@ class FPVRPPostProcessor():
 
                 # only takes the first two elements of each tuple element
                 arcs_for_vehicle_day = [(orig,dest) for orig, dest, veh, day in indices_o_d_vehicle_day]
-                print(arcs_for_vehicle_day)
+                #print(arcs_for_vehicle_day)
                 route_is_valid = RouteValidation(arcs_for_vehicle_day).get_status()
-                print(route_is_valid)
+                #print(route_is_valid)
                 if not route_is_valid:
                     self.faulty_routes[k, d] = arcs_for_vehicle_day
 
@@ -229,50 +226,50 @@ class FPVRPPostProcessor():
         costs_new = sum([self.distances[i,j] for i,j in new_route])
         return  costs_new - costs_old
 
-    def _correct_faulty_routes(self, relevant_var ='Y'):
-        self.additional_distance_after_adjust = 0
-
-        for (k, d), faulty_route in self.faulty_routes.items():
-            #print(faulty_route)
-            print(" x x x NEW FAULTY ROUTE ", faulty_route)
-            corrected_route = RouteValidation(faulty_route).correct_faulty_routes()
-            self.additional_distance_after_adjust += self._get_additional_costs_through_cor_route(faulty_route, corrected_route)
-
-            my_index = (slice(None), slice(None), k, d)
-            df_modified = self.grb_results_pd_dfs[relevant_var].loc[my_index]
-            df_modified = df_modified.reset_index()  #convert all indices to columns
-
-            print(df_modified)
-            print(corrected_route) # Todo
-            # Alternative Idee: erstmal all Ods einfügen, bis die Länge erfüllt ist
-            # dann mit .append() arbeiten
-            if len(df_modified['Vehicle']) < len(corrected_route):
-                df_modified['O'] = [i[0] for i in corrected_route[:len(df_modified['Vehicle'])]]
-                df_modified['D'] = [i[1] for i in corrected_route[:len(df_modified['Vehicle'])]]
-                for i in  corrected_route[(len(df_modified['Vehicle']) - 1) :]:
-                    df_modified.appendd
-
-
-                all_rows = [[i[0], i[1], list(df_modified['Vehicle'].values)[0], list(df_modified['Day'].values)[0], list(df_modified['Value'].values)[0]] for i in corrected_route]
-                print(all_rows)
-
-                df_new = pd.DataFrame(all_rows)
-                df_new.columns = [['O', 'D', 'Vehicle', 'Day', 'Value']]
-                df_modified = df_new
-
-            else:
-                df_modified['O'] = [i[0] for i in corrected_route]
-                df_modified['D'] = [i[1] for i in corrected_route]
-            print(df_modified)
-
-            df_modified.set_index(['O','D','Vehicle','Day'], inplace=True)
-            print(df_modified)
-
-
-
-        print("** Done ** \n ")
-        #self.dict_decvarstr_to_dict_vehicleday_to_val[relevant_var] = y_dict
-        #print(self.vehicle_day_to_arcs)
+    # def _correct_faulty_routes(self, relevant_var ='Y'):
+    #     self.additional_distance_after_adjust = 0
+    #
+    #     for (k, d), faulty_route in self.faulty_routes.items():
+    #         #print(faulty_route)
+    #         print(" x x x NEW FAULTY ROUTE ", faulty_route)
+    #         corrected_route = RouteValidation(faulty_route).correct_faulty_routes()
+    #         self.additional_distance_after_adjust += self._get_additional_costs_through_cor_route(faulty_route, corrected_route)
+    #
+    #         my_index = (slice(None), slice(None), k, d)
+    #         df_modified = self.grb_results_pd_dfs[relevant_var].loc[my_index]
+    #         df_modified = df_modified.reset_index()  #convert all indices to columns
+    #
+    #         print(df_modified)
+    #         print(corrected_route) # Todo
+    #         # Alternative Idee: erstmal all Ods einfügen, bis die Länge erfüllt ist
+    #         # dann mit .append() arbeiten
+    #         if len(df_modified['Vehicle']) < len(corrected_route):
+    #             df_modified['O'] = [i[0] for i in corrected_route[:len(df_modified['Vehicle'])]]
+    #             df_modified['D'] = [i[1] for i in corrected_route[:len(df_modified['Vehicle'])]]
+    #             for i in  corrected_route[(len(df_modified['Vehicle']) - 1) :]:
+    #                 df_modified.appendd
+    #
+    #
+    #             all_rows = [[i[0], i[1], list(df_modified['Vehicle'].values)[0], list(df_modified['Day'].values)[0], list(df_modified['Value'].values)[0]] for i in corrected_route]
+    #             print(all_rows)
+    #
+    #             df_new = pd.DataFrame(all_rows)
+    #             df_new.columns = [['O', 'D', 'Vehicle', 'Day', 'Value']]
+    #             df_modified = df_new
+    #
+    #         else:
+    #             df_modified['O'] = [i[0] for i in corrected_route]
+    #             df_modified['D'] = [i[1] for i in corrected_route]
+    #         print(df_modified)
+    #
+    #         df_modified.set_index(['O','D','Vehicle','Day'], inplace=True)
+    #         print(df_modified)
+    #
+    #
+    #
+    #     print("** Done ** \n ")
+    #     #self.dict_decvarstr_to_dict_vehicleday_to_val[relevant_var] = y_dict
+    #     #print(self.vehicle_day_to_arcs)
 
     def _correct_faulty_routes2(self, relevant_var ='Y'):
         self.additional_distance_after_adjust = 0

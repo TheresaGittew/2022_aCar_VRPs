@@ -1,8 +1,4 @@
-import numpy as np
-import matplotlib.pyplot as plt
 from gurobipy import Model, GRB, quicksum
-from Program import DEPR_ReadNilsInputFiles as ni
-
 
 from enum import Enum
 class Variant(Enum):
@@ -67,7 +63,7 @@ class MIP_FP_VRP():
         self.y = self.mp.addVars(vrp_inputs.A, vrp_inputs.T, vtype=GRB.BINARY)                  # whether link is taken or not
         self.z = self.mp.addVars(vrp_inputs.C, vrp_inputs.T, vrp_inputs.S , vtype=GRB.BINARY)   # whether customer is visited in time t or not for service s
         self.z_hub = self.mp.addVars([0], vrp_inputs.T, lb=0, vtype=GRB.INTEGER)             # hub decision variable
-        self.q = self.mp.addVars(vrp_inputs.C, vrp_inputs.T, vrp_inputs.S, lb=0, vtype=GRB.INTEGER) # number of services provided at a location
+        self.q = self.mp.addVars(vrp_inputs.C, vrp_inputs.T, vrp_inputs.S, lb=0, vtype=GRB.CONTINUOUS) # number of services provided at a location
         self.l = self.mp.addVars(vrp_inputs.A, vrp_inputs.T, vrp_inputs.S, lb=0, vtype=GRB.INTEGER) # because vehicle capacity itself is not sth we analyze (for now)
 
         # new variables
@@ -138,7 +134,7 @@ class MIP_FP_VRP():
             self.mp.addConstrs(quicksum(self.W_var[i, s] for i in self.sets.C) >= self.sets.v_s[s] for s in self.sets.S)
         else:
             self.mp.addConstrs(quicksum(self.q[i, t, s] for t in self.sets.T)
-                               == self.sets.W_i[i][ s] for i in self.sets.C for s in self.sets.S)
+                               >= self.sets.W_i[i][ s] for i in self.sets.C for s in self.sets.S)
         # Todo: Idea: Hier könnte man die Anzahl der T's auch so anpassen, dass abhängig vom Typen kleinere Sets von T gewählt werden
 
         # constraint 11: time constraints
@@ -170,8 +166,8 @@ class MIP_FP_VRP():
         self.mp.addConstrs(self.b[i, t] >= 0.001 for i in self.sets.C for t in self.sets.T)
 
         # Todo: a_Car Range dependent on type of service
-        self.mp.addConstrs(quicksum(self.y[i, j, t] * self.sets.c[i, j] for (i, j) in self.sets.A) <= self.sets.a_car_range * self.z_hub[
-                               0, t] for t in self.sets.T)
+        # self.mp.addConstrs(quicksum(self.y[i, j, t] * self.sets.c[i, j] for (i, j) in self.sets.A) <= self.sets.a_car_range * self.z_hub[
+        #                        0, t] for t in self.sets.T)
 
 
 
