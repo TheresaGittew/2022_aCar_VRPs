@@ -2,8 +2,9 @@ from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
 import os
 from itertools import cycle
-import SETUP_and_IO_NEW as stp_io
+import ExcelHandler as stp_io
 
+index_hub = 100
 
 class PVRP_Vizualizer():
 
@@ -57,14 +58,21 @@ class PVRP_Vizualizer():
         horizontal_space = 0
 
         for s in self.framework_input.S:
+            entry_available = True
+
+            print("next s: ", s)
             try:
                 q = self.q.loc[i, k, self.day_iter, s]
-                plt.text(x_cor + 0.04, y_cor + horizontal_space, s=str(s) + ': ' + str(int(q)), c=self.colors_for_services[s],
+            except KeyError:
+                print("Are in key error for customer, k, day, s: ", i, k, self.day_iter, s)
+
+                entry_available = False
+            if entry_available:
+                print("Are here for customer, k, day, s: ", i, k, self.day_iter, s)
+                plt.text(x_cor + 0.04, y_cor + horizontal_space, s=str(s) + ': ' + str(int(q)),
+                         c=self.colors_for_services[s],
                          alpha=1, fontsize=10)
                 horizontal_space -= 0.03
-
-            except ValueError:
-                pass
 
 
     def _plot_routes_for_one_day(self, vehicle_to_routes_current_day):
@@ -73,6 +81,8 @@ class PVRP_Vizualizer():
         # get all info the next day to print
         this_day = self.day_iter
         for vehicle, route in vehicle_to_routes_current_day.items():
+            print("We are here on day" , self.day_iter, " with vehicle " , vehicle , " and route ", route)
+
             color = next(self.colors_for_routes)
             for (i, j) in route:
 
@@ -85,6 +95,7 @@ class PVRP_Vizualizer():
                 # #
                 # 2: Write down the transported quantity per service type
                 #
+                print("next customer : " , i)
                 self._write_q(nodes_x_cors[i], nodes_y_cors[i],  i, vehicle)
                 # #
 
@@ -92,7 +103,7 @@ class PVRP_Vizualizer():
 
         nodes_x_cors, nodes_y_cors = self.framework_input.coordinates[0], self.framework_input.coordinates[1]
 
-        self.hub, = plt.plot(nodes_x_cors[0], nodes_y_cors[0], c='black', marker='H', label='Hub')  # draw the hub
+        self.hub, = plt.plot(nodes_x_cors[index_hub], nodes_y_cors[index_hub], c='black', marker='H', label='Hub')  # draw the hub
 
         self.all_customers = plt.scatter([nodes_x_cors[i] for i in list(nodes_x_cors.keys())],
                                           [nodes_y_cors[i] for i in list(nodes_y_cors.keys())], c='grey', alpha=0.6, label='Customer') # draw all customers (active + inactive)

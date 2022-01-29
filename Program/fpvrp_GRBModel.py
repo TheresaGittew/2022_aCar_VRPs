@@ -1,6 +1,7 @@
 from gurobipy import Model, GRB, quicksum, tuplelist
 from itertools import combinations
 
+index_hub = 100
 
 def get_successor(current_arc, traversed_arc_list):
    #  print("current acr " , current_arc[0])
@@ -19,15 +20,17 @@ def subtour_dict(selected_y_keys):
             day_vec_to_used_arcs[k,t].append((i,j))
     return day_vec_to_used_arcs
 
+# rename subtour dict to used-arcs
 def find_shortest_subtour_without_hub(subtour_dict):
     min_length = 1
 
     # step 1 : remove tours that don#t go back to node
     while min_length < 10:
+        print("are in min_length 1")
 
         for key, traversed_arcs_list in subtour_dict.items():
-            if len(traversed_arcs_list) == min_length and not list(filter(lambda x: x[0] == 0, traversed_arcs_list))\
-                    and not list(filter(lambda x: x[1] == 0, traversed_arcs_list)):
+            if len(traversed_arcs_list) == min_length and not list(filter(lambda x: x[0] == index_hub, traversed_arcs_list))\
+                    and not list(filter(lambda x: x[1] == index_hub, traversed_arcs_list)):
                         print(" are in first part with ", traversed_arcs_list)
                         k, t = key
                         return (k, t, traversed_arcs_list)
@@ -37,26 +40,29 @@ def find_shortest_subtour_without_hub(subtour_dict):
     min_length = 2
     while min_length < 10:
         for key, traversed_arcs_list in subtour_dict.items():
+            # print("are in min length 2 with the following subtour : ", subtour_dict)
+
             k, t = key
-            start_arc = list((filter(lambda x: x[0] == 0, traversed_arcs_list)))
+            start_arc = list((filter(lambda x: x[0] == index_hub, traversed_arcs_list)))
             route = []
             next_arc = start_arc
-            print(traversed_arcs_list)
+            # print(traversed_arcs_list)
             while len(route) < len(traversed_arcs_list):
                 route.append(next_arc)
-                if next_arc[0][1] == 0 and len(route) < len(traversed_arcs_list):  # takes first element ("next arc") from returned list from get_successor and then takes second node in tuple as destination
+                if next_arc[0][1] == index_hub and len(route) < len(traversed_arcs_list):  # takes first element ("next arc") from returned list from get_successor and then takes second node in tuple as destination
                     print(next_arc)
-                    print("are in second part with this list here ", traversed_arcs_list)
+                    # print("are in second part with this list here ", traversed_arcs_list)
                     return (k, t, traversed_arcs_list)
                 next_arc = get_successor(next_arc, traversed_arcs_list)
 
         min_length += 1
+    print("are here")
     return 'Routes i.O.'
 
 
 
 def mycallback(model, where):
-    #print("are in callback")
+
     if where == GRB.Callback.MIPSOL:
         print("+ + + +\n next call mycallbaack + + + +")
 
@@ -100,9 +106,15 @@ def mycallback(model, where):
             print("* * * mycallback has been called. All routes are ok. Finish * * *")
 
 
+def funct_weight_to_range(load_weight_total, max_weight=1000, max_range=300, min_range=50):
+    return max_range - ((max_range - min_range) / max_weight) * load_weight_total
+
+
+print(funct_weight_to_range(820.33))
+
 class FPVRPSVehInd:
 
-    def __init__(self, input_params, next_scenario):
+    def __init__(self, input_params, next_scenario, with_battery=False):
         self.cfg = input_params
         self.mp = Model('P_VRP')
         self.S = input_params.S
@@ -114,15 +126,24 @@ class FPVRPSVehInd:
         print("self.N in fpvrp: " , self.N)
 
         self.scenario = next_scenario
-
-
         self.__initialize_variables()
+
+        self.with_battery = with_battery
+        if with_battery:
+            self.__initialize_variables_batt_constr()
 
     def __initialize_variables(self):
         self.z = self.mp.addVars(self.N, self.K, self.cfg.T, lb=0, vtype=GRB.BINARY, name='z')   # customer visited?
         self.y = self.mp.addVars(self.cfg.A, self.K, self.cfg.T, vtype=GRB.BINARY, name='y') # arc usage
         self.z_vecs = self.mp.addVars(self.cfg.T, vtype=GRB.INTEGER, name='z_vecs') # number vecs from node
         self.q = self.mp.addVars(self.C, self.K, self.cfg.T, self.S, vtype=GRB.CONTINUOUS, name='q') # deliveries to users
+
+
+    def __initialize_variables_batt_constr(self):
+        self.l = self.mp.addVars(self.N, self.N, self.K, self.cfg.T, self.S, vtype=GRB.CONTINUOUS,name='l', lb=0)
+        self.battery = self.mp.addVars(self.N, self.K, self.cfg.T, vtype=GRB.CONTINUOUS,name='battery', ub=1, lb=0)
+        self.full_rng_for_l = self.mp.addVars(self.N, self.K, self.cfg.T, vtype=GRB.CONTINUOUS,name='full_range')
+
 
     def __set_default_constraints(self):
         print(" .. setting default constraint 4.2 ... ")
@@ -131,7 +152,7 @@ class FPVRPSVehInd:
         self.mp.addConstrs(self.q[i, k, t, s] <= self.cfg.w[i,s] * self.z[i, k, t] for i in self.C for k in self.K for t in self.cfg.T for s in self.S)
         print(" .. setting default constraint 4.3  ... ")
         # constraint 4.3: establish that total quantity delivered by k at t does not exceed vehicle capa
-        self.mp.addConstrs(quicksum(self.q[i, k, t, s] for i in self.C) <= self.cfg.Q[k, s] * self.z[100, k, t] for k in self.K for t in self.cfg.T for s in self.S)
+        self.mp.addConstrs(quicksum(self.q[i, k, t, s] for i in self.C) <= self.cfg.Q[k, s] * self.z[index_hub, k, t] for k in self.K for t in self.cfg.T for s in self.S)
         print(" .. setting default constraint 4.4  ... ")
         # constraint 4.4.: at each time period, at most 1 vehicle serves the demand of customer i
         self.mp.addConstrs(quicksum(self.z[i, k, t] for k in self.K) <= 1 for i in self.C for t in self.cfg.T)
@@ -148,15 +169,51 @@ class FPVRPSVehInd:
         self.mp.addConstrs(quicksum(self.q[i, k, t, s] for t in self.cfg.T for k in self.K)
                            >= self.cfg.W[i, s] for i in self.C for s in self.S)
 
-        # aux constraint
-        # self.mp.addConstrs(quicksum(self.y[i, j, k, t] for (i,j)  in self.cfg.A) >= 3
-        #                     for k in self.K for t in
-        #                    self.cfg.T)
-        #print(" .. setting default constraint 4.8  ... ")
+    def set_battery_constraints(self):
+        print("... setting battery constraints ... ")
+        self.mp.addConstrs(quicksum(self.l[i, j, k, t, s] for i in self.N if (i,j) in self.cfg.A)
+                           == quicksum(self.l[j, i_2, k, t, s] for i_2 in self.N if (j, i_2) in self.cfg.A) + self.q[j, k, t, s]
+                          for j in self.C for k in self.K for t in self.cfg.T for s in self.S)
 
-        # constraint 4.7
-        #self.set_subtour_elim_constraint() # bärstig
-        pass
+        self.mp.addConstrs(self.l[i, index_hub, k, t, s]  == 0
+                           for i in self.N if (i, index_hub) in self.cfg.A for k in self.K for t in self.cfg.T for s in self.S)
+
+
+        self.mp.addConstrs(
+            self.l[i, j, k, t, s] <= (self.y[i, j, k, t]) * 1500
+            for i in self.N for j in self.C if (i, j) in self.cfg.A for k in self.K for t in self.cfg.T for s in self.S)
+
+        for t in self.cfg.T:
+            for k in self.K:
+                for i in self.N:
+                    for j in self.N:
+                        if (i,j) in self.cfg.A:
+
+                            if i == index_hub:
+                                self.mp.addConstr(
+                                    self.full_rng_for_l[i, k, t] - self.cfg.c[i, j] >=
+                                    self.battery[j, k, t] * self.full_rng_for_l[i, k, t] - 5000 * (
+                                            1 - self.y[i, j, k, t]))
+                            elif j == index_hub:
+                                self.mp.addConstr(self.battery[i, k, t] * self.full_rng_for_l[i, k, t] - self.cfg.c[i, j] >=
+                                    - 5000 * (1 - self.y[i, j, k, t]))
+                            else:
+                                self.mp.addConstr(self.battery[i, k, t] * self.full_rng_for_l[i, k, t] -  self.cfg.c[i, j] >=
+                                                  self.battery[j, k, t] * self.full_rng_for_l[i, k, t] - 5000 * (1 - self.y[i, j, k, t]))
+
+
+
+        weights = {'PNC': 0.3, 'WDS' : 1}
+        for t in self.cfg.T:
+            for k in self.K:
+                for i in self.N:
+                    self.mp.addConstr(self.full_rng_for_l[i, k, t] ==
+                                                  funct_weight_to_range(quicksum(self.l[i, j, k, t, s] * weights[s]
+                                                                                 for s in self.cfg.S for j in self.C if (i,j) in self.cfg.A)))
+
+        #self.mp.addConstrs( self.battery[i, k, t] >= 0 for i in [index_hub] for k in self.K for t in self.cfg.T)
+
+
 
     def set_subtour_elim_constraint(self):
         print(" .. setting default constraint 4.7  ... ")
@@ -165,15 +222,12 @@ class FPVRPSVehInd:
                           for c_sub_id in self.cfg.C_subset_ids for i_2 in self.cfg.subset_id_to_C[c_sub_id]
                           for k in self.K for t in self.cfg.T)
 
-        # for t in self.cfg.T:
-        #     for k in self.K:
-        #         for c_sub_id in self.cfg.C_subset_ids:
-        #             for i_2 in self.cfg.subset_id_to_C[c_sub_id]:
-        #                 subtour_elim_constrs[c_sub_id, i_2, k, t].Lazy = 2
-        # print(" ... finished setting constraints .. ")
 
     def set_constraints(self):
         self.__set_default_constraints()
+
+        if self.with_battery:
+            self.set_battery_constraints()
 
 
 
@@ -191,6 +245,7 @@ class FPVRPSVehInd:
     def solve_model(self):
         self.mp.Params.MIPGap = 0.001  # self.mp.Params.TimeLimit = 5000
         self.mp.Params.LazyConstraints = 1
+        self.mp.Params.NonConvex = 2
         self.mp.optimize(mycallback)
         self.print_output()
 
@@ -225,7 +280,6 @@ class FPVRPVecIndPreProcess:
         #print(self.subset_id_to_C)
         self.subset_id_to_A = dict((self.all_subsets_flattened_list.index(subset), (lambda x: list(filter(lambda a: a[0] in subset and a[1] in subset, self.A.copy())))(subset))
                                    for subset in self.all_subsets_flattened_list)
-
 
     def get_subset_id_to_C(self):
         return self.subset_id_to_C

@@ -46,7 +46,7 @@ class IOExcel:
         df.drop(columns=['index'], inplace=True)
         df.rename(columns={0: 'Value'}, inplace=True)
         if isinstance(df['Value'][0], gurobipy.Var): df['Value'] = df['Value'].map(lambda x: x.X)
-        df = df[df['Value'] > 0.5]
+        df = df[df['Value'] > 0.001]
         return df
 
     def save_gurobi_res_in_excel(self, list_result_vars, model_objVal):

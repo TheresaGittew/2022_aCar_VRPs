@@ -2,6 +2,8 @@
 from itertools import product
 import pandas as pd
 
+index_hub = 100
+
 class RouteValidation():
     def __init__(self, arc_li):
         self.valid = self.__check_all(arc_li)
@@ -14,9 +16,9 @@ class RouteValidation():
         destination_node = next_elem_arc_list[1]
 
         # if we haven't reached last position in arc list but already returned to 0, the route has subtours
-        if destination_node == 0 and indx_next_pos_arc_li < indx_last_pos_arc_li:
+        if destination_node ==  index_hub and indx_next_pos_arc_li < indx_last_pos_arc_li:
             return False
-        elif destination_node == 0 and indx_next_pos_arc_li == indx_last_pos_arc_li:
+        elif destination_node ==  index_hub and indx_next_pos_arc_li == indx_last_pos_arc_li:
             return True
         else:
             next_elem_arc_list_n = next(filter(lambda x: x[0] == destination_node, arc_li), None)
@@ -34,7 +36,7 @@ class RouteValidation():
         # 2 find next elem
         prev_elem = next_elem_arc_list
         next_elem_arc_list = next(filter(lambda x: x[0] == destination_node, arc_li_consumed), None)
-        if next_elem_arc_list[1] == 0:
+        if next_elem_arc_list[1] ==  index_hub:
             return arc_li_consumed, arc_list_built, prev_elem
         else:
             return self.find_route_elems_to_integrate(next_elem_arc_list, arc_li_consumed, arc_list_built)
@@ -45,7 +47,7 @@ class RouteValidation():
         #print("remaining arc list"  , remaining_arc_list, " built arc list ", arc_list_built)
         if len(remaining_arc_list) == 1:
             last_remaining_arc = remaining_arc_list[0]
-            arc_list_built.append((last_remaining_arc[0],0))
+            arc_list_built.append((last_remaining_arc[0],  index_hub))
             return arc_list_built
         elif any(filter(lambda x : x[1] == arc_list_built[-1][1],  arc_list_built[:-1])): # multiple subtours included!
             #print("are here")
@@ -78,13 +80,13 @@ class RouteValidation():
 
 
     def correct_faulty_routes(self):
-        hub_leaving_link = next(filter(lambda x: x[0] == 0, self.arc_li), None)
+        hub_leaving_link = next(filter(lambda x: x[0] ==  index_hub, self.arc_li), None)
         if not hub_leaving_link:
-            hub_leaving_link = (0, self.arc_li[0][0]) # aux starter link (# todo why can this happen?)
+            hub_leaving_link = ( index_hub, self.arc_li[0][0]) # aux starter link (# todo why can this happen?)
 
         built_arcs, faulty_arc_list_rest = self._find_main_route(self.arc_li, [],  hub_leaving_link)
         if not faulty_arc_list_rest:
-            return built_arcs + [(built_arcs[-1][1], 0)]
+            return built_arcs + [(built_arcs[-1][1],  index_hub)]
         # print("built arcs", built_arcs, " faulty_arc_list_rest", faulty_arc_list_rest)
         built_arcs[-1] = built_arcs[-1][0], faulty_arc_list_rest[0][0] # replace last destination in built list with first origin in remaining list
         final_route = self._aux_integrate_missing_elems(faulty_arc_list_rest, built_arcs, built_arcs[-1][1])
@@ -94,7 +96,7 @@ class RouteValidation():
     # this method gets a list of links : [(0,1), (1,2), (2,5), (5,0)], (element does not have to be ordered)
     # checks if these links indicate that there are subtours within the route and returns false in this case, otherwise true
     def __check_if_route_has_no_subtours(self, arc_list):
-        starter_elem_arc_list = next(filter(lambda x: x[0] == 0, arc_list), None)  # we start with arc that leaves hub
+        starter_elem_arc_list = next(filter(lambda x: x[0] ==  index_hub, arc_list), None)  # we start with arc that leaves hub
         num_arcs_in_list = len(arc_list)
         indx_last_pos_arc_li = num_arcs_in_list - 1
 
@@ -102,7 +104,7 @@ class RouteValidation():
 
 
     def __check_if_route_connected_to_hub(self, arc_list):
-        starter_elem_arc_list = next(filter(lambda x: x[0] == 0, arc_list), None)
+        starter_elem_arc_list = next(filter(lambda x: x[0] ==  index_hub, arc_list), None)
         return True if starter_elem_arc_list else False
 
     # Hierarchy of checks so that the tests function as intended: (usually, 1 and 2 are given and 3 has to be checked)
@@ -115,7 +117,7 @@ class RouteValidation():
         only_origins = list(map(lambda x: x[0], arc_li))
         only_destins = list(map(lambda x: x[1], arc_li))
 
-        transformed_list = [( only_origins.count(li[0]), only_destins.count(li[0])) for li in arc_li]
+        transformed_list = [(only_origins.count(li[0]), only_destins.count(li[0])) for li in arc_li]
         #print(transformed_list)# check if each origin occurs once
         return not ( any(i != j for i, j in transformed_list)  or any(i != 1 for i, j in transformed_list))
 
@@ -209,15 +211,15 @@ class FPVRPPostProcessor():
 
                 # only takes the first two elements of each tuple element
                 arcs_for_vehicle_day = [(orig,dest) for orig, dest, veh, day in indices_o_d_vehicle_day]
-                #print(arcs_for_vehicle_day)
+                print(arcs_for_vehicle_day)
                 route_is_valid = RouteValidation(arcs_for_vehicle_day).get_status()
-                #print(route_is_valid)
+                print("Is valid? " , route_is_valid)
                 if not route_is_valid:
                     self.faulty_routes[k, d] = arcs_for_vehicle_day
 
             except KeyError:
                 pass
-
+        print("Faulty routes: " , self.faulty_routes)
         return self.faulty_routes
 
 
@@ -328,7 +330,7 @@ class FPVRPPostProcessor():
 
 
 # # Todo : All this has to go into the execution file
-# scenario = scenario_creator.Scenario(7,20,100,[0,1,2,3],5)
+# scenario = scenario_creator.Scenario(7,20, index_hub,[0,1,2,3],5)
 # # path_results = stp_io.get_path_for_scenario_results_file(scenario,
 # #                                                           name_file='ResultFile.xlsx', root_directory='/Users/theresawettig/PycharmProjects/2022_aCar_VRPs/Program/Results_FPVRPS')
 # start_directory = '/Users/theresawettig/PycharmProjects/2022_aCar_VRPs'  # '/home/sshrene/theresa/2022_aCar_VRPs'
