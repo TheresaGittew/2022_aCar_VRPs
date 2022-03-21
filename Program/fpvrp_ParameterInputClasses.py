@@ -44,14 +44,14 @@ class InputGISReader:
         path_to_real_demand = self.root_directory_project + self.rltv_path_to_demand
 
         pds_csv_wide = pd.read_csv(path_to_real_demand, delimiter=';')
-
-        pds_narrow = pds_csv_wide.melt(id_vars='ClusterId', var_name='Service_type')
         # Now we have this:
         #           ClusterId  Service_type    value
         # 0            2          WDS          2806,157477
         # 1            4          WDS          1501,658731
 
+        pds_narrow = pds_csv_wide.melt(id_vars='ClusterId', var_name='Service_type')
         pds_cols_to_indices = pds_narrow.set_index(['ClusterId','Service_type'])
+
         # Now we have this:
         #                            value
         # ClusterId  Service_type
@@ -128,8 +128,9 @@ class DummyForExcelInterface:
     def __init__(self):
         self.num_days = 5
         self.T = [i for i in range(self.num_days)]
-        self.S = ['WDS','PNC']  # important: stick to order in csv file!
-        capacities = {'PNC': 25, 'WDS': 1000}
+        # self.S = ['WDS','PNC']  # important: stick to order in csv file!
+        self.S = ['WDS']
+        capacities = {'WDS': 1000}
         self.vehicle_capa = dict(((i, c), capacities[c]) for i in range(15) for c in list(capacities.keys()))
 
 

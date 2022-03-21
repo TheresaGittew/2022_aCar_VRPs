@@ -48,7 +48,7 @@ for next_scenario in scenarios:
     model.set_objective()
     model.solve_model()
 
-    stp.save_gurobi_res_in_excel_fpvrp([model.z, model.y, model.q], model.fpvrp_obj.objVal, next_scenario, path='../Results_FPVRPS') # change this method
+    stp.save_gurobi_res_in_excel_fpvrp([model.z, model.y, model.q], model.fpvrp_obj.objVal, next_scenario, path='Results_FPVRPS') # change this method
 
     ##
     # paint outputs

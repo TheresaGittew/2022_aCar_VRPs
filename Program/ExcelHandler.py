@@ -5,16 +5,14 @@ import gurobipy
 import pandas as pd
 import math
 
-def get_path_str_for_scenario(scenario, root_directory):
-    return root_directory  + '/Scenario_NumVec' + str(scenario.num_vecs) + '-LBs' \
-                  + str(scenario.lower_bound) + '-UBs' + str(scenario.upper_bound)+'/'
-
-
 class IOExcel:
+
+    def get_path_str_for_scenario(self):
+        return self.path_to_scenario_folder_str
 
     def __init__(self, scenario, root_directory, add_to_folder_title='', title_excel_to_create_or_read ="DecisionvariableValues.xlsx",
                  titles_keys_per_dec_var=(['Customer', 'Vehicle', 'Day'], ['O', 'D', 'Vehicle', 'Day'],
-                                          ['Customer', 'Vehicle', 'Day', 'ServiceType']), output_tab_names=('Z', 'Y', 'Q')):
+                                                ['Customer', 'Vehicle', 'Day', 'ServiceType']), output_tab_names=('Z', 'Y', 'Q')):
         self.root_directory = root_directory
         self.scenario = scenario
 

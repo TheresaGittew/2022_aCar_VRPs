@@ -10,7 +10,7 @@ class PVRP_Vizualizer():
 
     def __init__(self, framework_input, scenario, dicts_to_grb_dataframes_with_multiindex, root_directory_for_saving):
         self.scenario = scenario
-        self.path_for_saving = stp_io.get_path_str_for_scenario(self.scenario, root_directory=root_directory_for_saving)
+        self.path_for_saving = root_directory_for_saving
         self.max_days = len(framework_input.T)
         self.framework_input = framework_input
         self.dicts_to_grb_dataframes_with_multiindex = dicts_to_grb_dataframes_with_multiindex
@@ -68,7 +68,7 @@ class PVRP_Vizualizer():
 
                 entry_available = False
             if entry_available:
-                print("Are here for customer, k, day, s: ", i, k, self.day_iter, s)
+                print("Are here for customer, k, day, s: ", i, k, self.day_iter, s, "load : ", q)
                 plt.text(x_cor + 0.04, y_cor + horizontal_space, s=str(s) + ': ' + str(int(q)),
                          c=self.colors_for_services[s],
                          alpha=1, fontsize=10)

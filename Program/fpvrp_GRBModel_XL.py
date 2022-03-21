@@ -193,6 +193,7 @@ class FPVRPSVehInd:
         self.y = self.mp.addVars(self.cfg.A, self.K, self.cfg.T, vtype=GRB.BINARY, name='y') # arc usage
         self.z_vecs = self.mp.addVars(self.cfg.T, vtype=GRB.INTEGER, name='z_vecs') # number vecs from node
         self.q = self.mp.addVars(self.C, self.K, self.cfg.T, self.S, vtype=GRB.CONTINUOUS, name='q') # deliveries to users
+        self.u = self.mp.addVars(self.cfg.H, self.K, name='u')
 
 
     def __initialize_variables_batt_constr(self):
@@ -208,7 +209,10 @@ class FPVRPSVehInd:
         self.mp.addConstrs(self.q[i, k, t, s] <= self.cfg.w[i,s] * self.z[i, k, t] for i in self.C for k in self.K for t in self.cfg.T for s in self.S)
         print(" .. setting default constraint 4.3  ... ")
         # constraint 4.3: establish that total quantity delivered by k at t does not exceed vehicle capa
-        self.mp.addConstrs(quicksum(self.q[i, k, t, s] for i in self.C) <= self.cfg.Q[k, s] * self.z[index_hub, k, t] for k in self.K for t in self.cfg.T for s in self.S)
+        self.mp.addConstrs(quicksum(self.q[i, k, t, s] for i in self.C) <= quicksum(self.cfg.Q_h_s[h, s] * self.u[h,k]  for h in self.cfg.H) for k in self.K for t in self.cfg.T for s in self.S)
+        print(" .. setting default constraint 4.3b  ... ") # only allow positiv quantity in case a vehicle is active on that day => we need Q hat!!
+        self.mp.addConstrs(quicksum(self.q[i, k, t, s] for i in self.C) <= self.cfg.Q_bigM[s] * self.z[index_hub, k, t]  for k in self.K for t in self.cfg.T for s in self.S)
+
         print(" .. setting default constraint 4.4  ... ")
         # constraint 4.4.: at each time period, at most 1 vehicle serves the demand of customer i
         self.mp.addConstrs(quicksum(self.z[i, k, t] for k in self.K) <= 1 for i in self.C for t in self.cfg.T)
@@ -225,10 +229,22 @@ class FPVRPSVehInd:
         self.mp.addConstrs(quicksum(self.q[i, k, t, s] for t in self.cfg.T for k in self.K)
                            >= self.cfg.W[i, s] for i in self.C for s in self.S)
 
+        print("... setting default constraint 4.9. ...")
+        self.mp.addConstrs(quicksum(self.u[h, k] for h in self.cfg.H)
+                           >= self.z[i, k, t] for i in [index_hub] for k in self.K for t in self.cfg.T)
+
+        self.mp.addConstrs(quicksum(self.u[h, k] for h in self.cfg.H)
+                           <= 1 for k in self.K) # die müsste eig. überflüssig sein!
+
         self.set_max_num_stops()
+        self.set_symmetry_breaking()
+
+    def set_symmetry_breaking(self):
+        self.mp.addConstrs(quicksum(self.u[h,k] for h in self.cfg.H ) >= quicksum(self.u[h, k+1] for h in self.cfg.H ) for k in self.K if k != self.K[-1])
+        #self.mp.addConstrs(quicksum(self.z[index_hub, k, t])
 
     def set_max_num_stops(self): # todo => max_stops in config class
-        self.mp.addConstrs(quicksum(self.z[i, k, t] for i in self.C ) <= self.cfg.stop_limit for k in self.K for t in self.cfg.T)
+        self.mp.addConstrs(quicksum(self.z[i, k, t] for i in self.C ) <= 4 for k in self.K for t in self.cfg.T)
 
     def set_time_limit(self):
         print("travel times: ", self.cfg.travel_time)
@@ -314,8 +330,9 @@ class FPVRPSVehInd:
         self.mp._captured_tours = []
         self.mp._faulty_nodes_so_far = []
 
-        # here, you can potentially add further cost factors
+        # here, you can potentially add further cost factorsself
         self.mp.setObjective(
+            quicksum(self.cfg.f[h] * self.u[h,k] for h in self.cfg.H for k in self.K) +
             quicksum(self.y[i, j, k, t] * self.cfg.c[i, j] for (i, j) in self.cfg.A for t in self.cfg.T for k in self.K))
 
     def solve_model(self):
@@ -398,6 +415,14 @@ class FPVRPVecIndConfg:
         self.time_limit = time_limit
         self.stop_limit = stop_limit
         self.range_limit = range_limit
+
+        # Todo:
+        # currently infos about vehicle configs are manually entered here. we would need to put all of that first into the init-parameters row and then also into an
+        # input excel file
+        self.Q_h_s = {(0,'PNC'):15, (0,'WDS'):1000, (1,'PNC'):30, (1, 'WDS'):750}
+        self.Q_bigM = {'PNC':30, 'WDS':1000}
+        self.H = [0,1]
+        self.f = {0:3000, 1:4000}
 
         # self.C_subset_ids = subset_ids
         # self.subset_id_to_C = subset_id_to_C

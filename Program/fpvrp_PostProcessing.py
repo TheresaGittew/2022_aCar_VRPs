@@ -1,13 +1,31 @@
 # Methods for checking if routes are valid
 from itertools import product
+import numpy as np
 import pandas as pd
+from k_opt_heuristics import tsp_2_opt
 
 index_hub = 100
+
 
 class RouteValidation():
     def __init__(self, arc_li):
         self.valid = self.__check_all(arc_li)
         self.arc_li = arc_li
+
+    def order_links(self):
+        print("arclist unordered : ", self.arc_li)
+        arclist_ordered = []
+        current_elem = self.arc_li[0]
+        arclist_ordered.append(current_elem)
+        for count in range(len(self.arc_li) - 1):
+            destination = current_elem[1]
+            current_elem = [i for i in self.arc_li if i[0] == destination][0]  # next element: origin = current dest
+            arclist_ordered.append(current_elem)
+        print("arclist ordered ", arclist_ordered)
+        return arclist_ordered
+
+
+
 
     def get_status(self):
         return self.valid
@@ -89,9 +107,8 @@ class RouteValidation():
             return built_arcs + [(built_arcs[-1][1],  index_hub)]
         # print("built arcs", built_arcs, " faulty_arc_list_rest", faulty_arc_list_rest)
         built_arcs[-1] = built_arcs[-1][0], faulty_arc_list_rest[0][0] # replace last destination in built list with first origin in remaining list
-        final_route = self._aux_integrate_missing_elems(faulty_arc_list_rest, built_arcs, built_arcs[-1][1])
-        return final_route
-
+        corrected_route = self._aux_integrate_missing_elems(faulty_arc_list_rest, built_arcs, built_arcs[-1][1])
+        return corrected_route
 
     # this method gets a list of links : [(0,1), (1,2), (2,5), (5,0)], (element does not have to be ordered)
     # checks if these links indicate that there are subtours within the route and returns false in this case, otherwise true
@@ -102,10 +119,10 @@ class RouteValidation():
 
         return self.__check_next_link(0, starter_elem_arc_list, indx_last_pos_arc_li, arc_list)
 
-
     def __check_if_route_connected_to_hub(self, arc_list):
         starter_elem_arc_list = next(filter(lambda x: x[0] ==  index_hub, arc_list), None)
         return True if starter_elem_arc_list else False
+
 
     # Hierarchy of checks so that the tests function as intended: (usually, 1 and 2 are given and 3 has to be checked)
     # 1. check if route has valid elements
@@ -118,7 +135,6 @@ class RouteValidation():
         only_destins = list(map(lambda x: x[1], arc_li))
 
         transformed_list = [(only_origins.count(li[0]), only_destins.count(li[0])) for li in arc_li]
-        #print(transformed_list)# check if each origin occurs once
         return not ( any(i != j for i, j in transformed_list)  or any(i != 1 for i, j in transformed_list))
 
 
@@ -137,70 +153,19 @@ class RouteValidation():
 
 class FPVRPPostProcessor():
                                         # excel io grb results have MULTIINDEX!
-    def __init__(self, cfg, scenario, excel_io_grb_results):
+    def __init__(self, cfg, scenario, excel_io_grb_results, distances):
        # self.path_to_gurobi_result = excel_io.get_path_to_excel_file()
         self.scenario = scenario
         self.T = cfg.T
-        self.grb_results_pd_dfs = excel_io_grb_results
+        self.grb_results_dict_to_df_input = excel_io_grb_results.copy()
+        self.distances = distances
 
-        # automatically triggered methods
+                                        # automatically triggered methods
 
+    def _find_and_set_faulty_routes(self, grb_results_dict_to_df_input_y):
 
-
-    #
-    # def get_vehicle_day_to_route_dict(self):
-    #     return self.vehicle_day_to_arcs
-    #
-    # def get_dict_decvar_to_vehicleday(self):
-    #     return self.dict_decvarstr_to_dict_vehicleday_to_val
-
-    # def _create_next_inner_dict(self, df):
-    #
-    #     dict_vehicleday_to_routes = {}
-    #     for k in self.scenario.K:
-    #         for t in (self.T):
-    #             results = list(df.query('Vehicle ==' + str(k) + ' and Day == ' + str(t)).values.tolist())
-    #
-    #             dict_vehicleday_to_routes[k,t] = results
-    #     #print("Are in  next inner dict", dict_vehicleday_to_routes)
-    #     return dict_vehicleday_to_routes
-
-    # def _transform_q_to_dict_customer_vehicle_day_to_quantity(self, relevant_tab='Q'):
-    #     self.dict_customer_vec_day_to_q = {}
-    #     for k, v in self.dict_decvarstr_to_dict_vehicleday_to_val[relevant_tab].items():
-    #         # v looks like this: [[25.0, 14, 0, 0, 'PNC'], [61.8, 14, 0, 0, 'WDS'], [82.6, 15, 0, 0, 'WDS']]
-    #         for i in v:
-    #             vehicle, day = k
-    #             print(i)
-    #             customer = i[1]
-    #             service_type = i[4]
-    #             self.dict_customer_vec_day_to_q[customer, vehicle, day, service_type] = i[0]  # eg, remove the other elements like (k, t)-columns
-    #
-    # def get_dict_customer_vec_day_to_q(self):
-    #     return self.dict_customer_vec_day_to_q
-    #
-    # def _transform_y_to_dict_vehicle_day_to_arclist(self, relevant_tab='Y'):
-    #     self.vehicle_day_to_arcs = {}
-    #     for k, v in self.dict_decvarstr_to_dict_vehicleday_to_val[relevant_tab].items():
-    #         # print(v)
-    #         self.vehicle_day_to_arcs[k] = [(i[0], i[1]) for i in v] # eg, remove the other elements like (k, t)-columns
-
-    # def _transform_df_results_to_dict(self):
-    #     self.dict_decvarstr_to_dict_vehicleday_to_val = {}
-    #     iter_dec_var_names = iter(self.dec_var_names)
-    #     next_df_str = next(iter_dec_var_names, None)
-    #     while next_df_str:
-    #         #print(next_df_str)
-    #         self.dict_decvarstr_to_dict_vehicleday_to_val[next_df_str] = self._create_next_inner_dict(self.dict_decvarstr_to_df[next_df_str])
-    #         next_df_str = next(iter_dec_var_names, None)
-    #
-    #     #print(self.dict_decvarstr_to_vehicledaydict)
-    #     return self.dict_decvarstr_to_dict_vehicleday_to_val
-
-    def _get_faulty_routes(self, relevant_var='Y'):
-
-        df_y = self.grb_results_pd_dfs[relevant_var]
-        self.faulty_routes = {}
+        df_y = grb_results_dict_to_df_input_y
+        faulty_routes = {}
         for (k, d) in product(self.scenario.K, self.T):
             try:
                 my_index = (slice(None), slice(None), k, d)
@@ -213,138 +178,131 @@ class FPVRPPostProcessor():
                 arcs_for_vehicle_day = [(orig,dest) for orig, dest, veh, day in indices_o_d_vehicle_day]
                 print(arcs_for_vehicle_day)
                 route_is_valid = RouteValidation(arcs_for_vehicle_day).get_status()
-                print("Is valid? " , route_is_valid)
                 if not route_is_valid:
-                    self.faulty_routes[k, d] = arcs_for_vehicle_day
+                    faulty_routes[k, d] = arcs_for_vehicle_day
 
             except KeyError:
                 pass
-        print("Faulty routes: " , self.faulty_routes)
-        return self.faulty_routes
+        return faulty_routes
 
+    def _get_cost_difference(self, faulty_route, new_route):
 
-    def _get_additional_costs_through_cor_route(self, faulty_route, new_route):
         costs_old = sum([self.distances[i,j] for i,j in faulty_route])
         costs_new = sum([self.distances[i,j] for i,j in new_route])
         return  costs_new - costs_old
 
-    # def _correct_faulty_routes(self, relevant_var ='Y'):
-    #     self.additional_distance_after_adjust = 0
-    #
-    #     for (k, d), faulty_route in self.faulty_routes.items():
-    #         #print(faulty_route)
-    #         print(" x x x NEW FAULTY ROUTE ", faulty_route)
-    #         corrected_route = RouteValidation(faulty_route).correct_faulty_routes()
-    #         self.additional_distance_after_adjust += self._get_additional_costs_through_cor_route(faulty_route, corrected_route)
-    #
-    #         my_index = (slice(None), slice(None), k, d)
-    #         df_modified = self.grb_results_pd_dfs[relevant_var].loc[my_index]
-    #         df_modified = df_modified.reset_index()  #convert all indices to columns
-    #
-    #         print(df_modified)
-    #         print(corrected_route) # Todo
-    #         # Alternative Idee: erstmal all Ods einfügen, bis die Länge erfüllt ist
-    #         # dann mit .append() arbeiten
-    #         if len(df_modified['Vehicle']) < len(corrected_route):
-    #             df_modified['O'] = [i[0] for i in corrected_route[:len(df_modified['Vehicle'])]]
-    #             df_modified['D'] = [i[1] for i in corrected_route[:len(df_modified['Vehicle'])]]
-    #             for i in  corrected_route[(len(df_modified['Vehicle']) - 1) :]:
-    #                 df_modified.appendd
-    #
-    #
-    #             all_rows = [[i[0], i[1], list(df_modified['Vehicle'].values)[0], list(df_modified['Day'].values)[0], list(df_modified['Value'].values)[0]] for i in corrected_route]
-    #             print(all_rows)
-    #
-    #             df_new = pd.DataFrame(all_rows)
-    #             df_new.columns = [['O', 'D', 'Vehicle', 'Day', 'Value']]
-    #             df_modified = df_new
-    #
-    #         else:
-    #             df_modified['O'] = [i[0] for i in corrected_route]
-    #             df_modified['D'] = [i[1] for i in corrected_route]
-    #         print(df_modified)
-    #
-    #         df_modified.set_index(['O','D','Vehicle','Day'], inplace=True)
-    #         print(df_modified)
-    #
-    #
-    #
-    #     print("** Done ** \n ")
-    #     #self.dict_decvarstr_to_dict_vehicleday_to_val[relevant_var] = y_dict
-    #     #print(self.vehicle_day_to_arcs)
+    def correct_routes(self, grb_results_dict_to_df_input_y, relevant_var ='Y'):
 
-    def _correct_faulty_routes2(self, relevant_var ='Y'):
+        # #
+        # use given distances and find faulty routes
+        faulty_routes = self._find_and_set_faulty_routes(grb_results_dict_to_df_input_y.copy())
+        print("faulty routes: ", faulty_routes)
+
+        #
         self.additional_distance_after_adjust = 0
-        grb_result_copy = self.grb_results_pd_dfs['Y'].copy().reset_index()
+        grb_y_df_copy_without_mltindex = grb_results_dict_to_df_input_y.copy().reset_index()
 
-        for (k, d), faulty_route in self.faulty_routes.items():
+        for (k, d), faulty_route in faulty_routes.items():
 
             # #
             # get corrected route for current faulty route
             corrected_route = RouteValidation(faulty_route).correct_faulty_routes()
+            self.additional_distance_after_adjust += self._get_cost_difference(faulty_route,
+                                                                               corrected_route)
             corrected_route_iter = iter(corrected_route)
 
             # #
             # index list
-            ind_list = grb_result_copy.index[(grb_result_copy['Vehicle'] == k) & (grb_result_copy['Day'] == d)].tolist()
+            ind_list = grb_y_df_copy_without_mltindex.index[(grb_y_df_copy_without_mltindex['Vehicle'] == k) &
+                                                            (grb_y_df_copy_without_mltindex['Day'] == d)].tolist()
 
             for i in ind_list:
                 next_link = corrected_route_iter.__next__()
-                grb_result_copy.loc[i] = [next_link[0], next_link[1], k, d, 1]
+                grb_y_df_copy_without_mltindex.loc[i] = [next_link[0], next_link[1], k, d, 1]
 
-        grb_result_with_multiindex = grb_result_copy.set_index(['O','D','Vehicle','Day'], inplace=True)
-        self.grb_y_df_adjusted_with_multiindx = grb_result_with_multiindex
-        self.grb_results_pd_dfs['Y'] = grb_result_copy
-
+        return grb_y_df_copy_without_mltindex
 
     def get_distance(self):
         return self.additional_distance_after_adjust
 
-    def correct_routes(self, distances):
-        self.distances = distances
-        self._get_faulty_routes()
-        self._correct_faulty_routes2()
 
-    def get_dfs_without_multiindex(self):
-        for k, v in self.grb_results_pd_dfs.items():
-            self.grb_results_pd_dfs[k] = v.reset_index()
+    def _enhance_routes_aux(self, arclist_current_route):
+        print("INPUT ROUTE TO BE IMPROVED" , arclist_current_route)
 
-        return self.grb_results_pd_dfs
+        # #
+        # preparations : map nodes in given route to new indices (0, .. , n) so the k-opt methods can be applied
+        nodes_in_tour = [i[0] for i in RouteValidation(arclist_current_route).order_links()]
+        node_id_old_to_new = dict((nodes_in_tour[i], i) for i in range(len(nodes_in_tour)))
+        node_id_new_to_old = dict((i, nodes_in_tour[i]) for i in range(len(nodes_in_tour)))
 
-    def get_df_y_with_multiindex(self):
-        return self.grb_y_df_adjusted_with_multiindx
+        # #
+        # create o-d matrix with new indices
+        distances_mapped = dict(((node_id_old_to_new[o], node_id_old_to_new[d]), self.distances[o,d])
+                                for o,d in product(nodes_in_tour, nodes_in_tour) if o != d)
+
+        # #
+        # prepare the input parameters for tsp_2_opt method (graph &  list of used nodes)
+        graph = np.array([[distances_mapped[i, i_2] if i_2 != i else 0 for i_2 in node_id_old_to_new.values()]
+                          for i in node_id_old_to_new.values()])
+        arclist_current_route_mapped = [node_id_old_to_new[i] for i in nodes_in_tour] + [node_id_old_to_new[nodes_in_tour[0]]]
+        # #
+        # use heuristic
+        best_found_route_single_nodes = tsp_2_opt(graph, arclist_current_route_mapped)
+
+        # #
+        # mapping back to original node indices
+        best_found_route_links = list(map(
+            (lambda x: (node_id_new_to_old[x[0]], node_id_new_to_old[x[1]])), zip(best_found_route_single_nodes, best_found_route_single_nodes[1:])))
+        print("OUTPUT ", best_found_route_links)
+        return best_found_route_links
+
+    # gets dictionary with o-d distances and route_df as multiindex pd dataframe
+    def enhance_routes(self, routes_df):
+
+        df_y_with_multiindex = routes_df.copy()
+        df_y_modified = routes_df.copy().reset_index()
+
+        self.additional_distance_after_adjust = 0
+
+        for (k, d) in product(self.scenario.K, self.T):
+
+            entry_available = True
+            try:
+                my_indices = (slice(None), slice(None), k, d)
+                df_sub = df_y_with_multiindex.loc[(my_indices),:]
+
+
+            except KeyError:
+                entry_available = False
+                pass
+
+            if entry_available:
+
+                # returns: [(1, 0, 11, 4), (12, 44, 11, 4),,. (o, d, v, d) ...
+                indices_o_d_vehicle_day = df_sub.index.values.tolist()
+
+                # only takes the first two elements of each tuple element
+                links_for_k_d = [(orig, dest) for orig, dest, veh, day in indices_o_d_vehicle_day]
+
+                links_for_k_d_impr = self._enhance_routes_aux(links_for_k_d)
+                links_for_k_d_impr_it = iter(links_for_k_d_impr)
+
+                self.additional_distance_after_adjust += self._get_cost_difference(links_for_k_d,
+                                                                                   links_for_k_d_impr)
+
+                # #
+                # index list
+                ind_list = df_y_modified.index[ (df_y_modified['Vehicle'] == k) & (df_y_modified['Day'] == d)].tolist()
+
+                for i in list(ind_list):
+                    print(i)
+                    next_link = links_for_k_d_impr_it.__next__()
+                    df_y_modified.loc[i] = [next_link[0], next_link[1], k, d, 1]
+
+        return df_y_modified
+
+    def set_multiindex_for_y_df(self, df, indices=('O','D','Vehicle','Day')):
+        return df.set_index(list(indices))
 
 
 
-
-    # def _convert_new_y_for_excel(self):
-    #     # method converts the transformed y's back into a format that is suitable for storing in an excel
-    #     o_d_vec_day = {}
-    #     for key, arc_list in self.vehicle_day_to_arcs.items():
-    #         v = key[0]
-    #         day = key[1]
-    #         for (o,d) in arc_list:
-    #             o_d_vec_day[o,d,v,day] = 1
-    #
-    #     return o_d_vec_day
-
-
-# # Todo : All this has to go into the execution file
-# scenario = scenario_creator.Scenario(7,20, index_hub,[0,1,2,3],5)
-# # path_results = stp_io.get_path_for_scenario_results_file(scenario,
-# #                                                           name_file='ResultFile.xlsx', root_directory='/Users/theresawettig/PycharmProjects/2022_aCar_VRPs/Program/Results_FPVRPS')
-# start_directory = '/Users/theresawettig/PycharmProjects/2022_aCar_VRPs'  # '/home/sshrene/theresa/2022_aCar_VRPs'
-#
-# path_OD_matrix = start_directory + '/GIS_Data/11-15-21_ODs.csv'
-# coordinates = dp.read_coors(start_directory + '/GIS_Data/11-15-21_CoordinatesLongitudeLatitude.csv')
-# #
-# od_matrix_as_dict = dp.read_odmatrix(path_OD_matrix)
-# od_matrix_with_distances = dict((k, od_matrix_as_dict[k][1]) for k in od_matrix_as_dict.keys())
-#
-# pp = FPVRPPostProcessor('/Users/theresawettig/PycharmProjects/2022_aCar_VRPs'+'/Program/Results_FPVRPS',scenario,od_matrix_with_distances)
-# vehicle_day_to_arcs, additional_distance_after_adjust, o_d_vec_day = pp.read_results_and_adjust_routes()
-#
-# print(" + + + Are here + + + + + " )
-# stp_io.save_gurobi_res_in_excel_fpvrp([o_d_vec_day], additional_distance_after_adjust, scenario, root_directory='Results_FPVRPS',
-#                                       titles_keys_per_dec_var=[['O', 'D', 'Vehicle', 'Day']], output_tab_names=('Z') , from_gurobi=False)
-# #check_if_route_correct([(1,2),(2,3), (3,0)])
