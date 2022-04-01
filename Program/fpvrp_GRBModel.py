@@ -379,7 +379,7 @@ class FPVRPVecIndPreProcess:
 
 class FPVRPVecIndConfg:
 
-    def __init__(self, T, A, W_i, w_i, capa, c, coordinates, S, travel_time, service_time={'WDS':0.0001, 'PNC':0.25}, time_limit=7, stop_limit=5, range_limit=200):
+    def __init__(self, T, A, W_i, w_i, capa, c, coordinates, S, travel_time, service_time={'WDS':0.0001, 'PNC':0.25}, time_limit=7, stop_limit=4, range_limit=200):
 
         self.T = T
         self.A = A

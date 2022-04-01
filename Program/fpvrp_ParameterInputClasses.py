@@ -1,6 +1,7 @@
 import os
 import pandas as pd
-
+import random
+index_hub = 100
 
 class InputGISReader:
 
@@ -106,6 +107,8 @@ class InputGISReader:
         relevant_indices = pd_ods.index[(pd_ods['FROM_ID'] == pd_ods['TO_ID'])]
         pd_ods = pd_ods.drop(index=relevant_indices)
 
+
+
         # 2. Transform dataframe so we can easily convert it to a dictionary
         pd_ods_with_ind = pd_ods.set_index(['FROM_ID','TO_ID'])
         pd_ods_with_ind['DURATION_H'] = pd_ods_with_ind['DURATION_H'].apply(lambda x: float((x).replace(',', '.')))
@@ -128,14 +131,14 @@ class DummyForExcelInterface:
     def __init__(self):
         self.num_days = 5
         self.T = [i for i in range(self.num_days)]
-        # self.S = ['WDS','PNC']  # important: stick to order in csv file!
-        self.S = ['WDS']
+        self.S = ['WDS','PNC']  # important: stick to order in csv file!
+        # self.S = ['WDS']
         capacities = {'WDS': 1000}
-        self.vehicle_capa = dict(((i, c), capacities[c]) for i in range(15) for c in list(capacities.keys()))
+        #self.vehicle_capa = dict(((i, c), capacities[c]) for i in range(15) for c in list(capacities.keys()))
 
-
+    #
     def get_vehiclecapa_numdays_S(self):
-        return self.vehicle_capa, self.T, self.S
+        return 0, self.T, self.S
 
 
 class Scenario():
@@ -145,14 +148,23 @@ class Scenario():
     #            arcs_list[0, c][1] > min_distance_bekoji and arcs_list[0, c][1] < max_distance_bekoji]
     #     return lis
 
-    def __init__(self, number_vehicles, lower_bound, upper_bound, GIS_inputs): # todo remove T
+    def __init__(self, number_vehicles, lower_bound, upper_bound, GIS_inputs, size=10): # todo remove T
+
         self.num_vecs = number_vehicles
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
 
         self.C = [c for c in GIS_inputs.get_customers() if GIS_inputs.get_od_to_dist()[100, c] > lower_bound and GIS_inputs.get_od_to_dist()[100, c] < upper_bound]
+        print("Numer customers total" , len(self.C), " upper bound: ", upper_bound, " lower bound: ", lower_bound)
+        random.seed(10)
+        self.C = random.choices(self.C, k=10)
+        print(self.C)
 
         print("Relevant customers" , self.C)
-        self.N = [100] + self.C
+        self.N = [index_hub] + self.C
         self.K = [k for k in range(self.num_vecs)]
+        self.A = [(i,j) for (i,j) in GIS_inputs.get_od_to_dist().keys() if i in self.N and j in self.N ]
+        print("Relevant arcs: ", self.A)
+
+        # Todo! Adjust this so as only relevant arcs are included in self.A!!
 

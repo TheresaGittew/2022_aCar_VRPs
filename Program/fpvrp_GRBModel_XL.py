@@ -2,6 +2,7 @@ from gurobipy import Model, GRB, quicksum, tuplelist
 from itertools import combinations
 from fpvrp_PostProcessing import RouteValidation
 import collections
+import math
 
 index_hub = 100
 
@@ -105,10 +106,10 @@ def mycallback(model, where):
         # get z
         vals_z = model.cbGetSolution(model._z) # z has dimension i, k, t
         vals_y = model.cbGetSolution(model._y)
-        selected_z = tuplelist((i,k,t) for i, k, t in model._z.keys() if vals_z[i,k,t] > 0.5)
-        max_t =  max([t for (i,k,t) in selected_z])
-        max_k = max([k for (i,k,t) in selected_z])
-        # print("max t: " , max_t, " max_k : ", max_k)
+        z_indices = tuplelist((i,k,t) for i, k, t in model._z.keys())
+        max_t =  max([t for (i,k,t) in z_indices])
+        max_k = max([k for (i,k,t) in z_indices])
+        print("max t: " , max_t, " max_k : ", max_k)
 
 
         selected_y = tuplelist(() for i,j,k,t in model._y.keys() if vals_y[i,j,k,t] > 0.5)
@@ -149,9 +150,11 @@ def mycallback(model, where):
                 subset_id_to_C = prepr.get_subset_id_to_C()
                 C_subset_ids = prepr.get_subset_ids()
                 for c_sub_id in C_subset_ids:
+                    print(subset_id_to_C[c_sub_id])
                     for i_2 in subset_id_to_C[c_sub_id]:
                         for k in range(max_k+1):
                             for t in range(max_t+1):
+
                                # print("- - - we add a new lazy constraint for set", subset_id_to_C[c_sub_id], " - - ", " s: ", i_2, ", k: ", k, ", t: ", t)
                                 model.cbLazy(quicksum(model._y[i,j,k,t] for i,j in subset_id_to_A[c_sub_id])
                                <= quicksum(model._z[i,k,t] for i in subset_id_to_C[c_sub_id]) - model._z[i_2, k,t])
@@ -179,6 +182,7 @@ class FPVRPSVehInd:
         self.C = next_scenario.C
         self.K = next_scenario.K
         self.N = next_scenario.N
+        self.A = next_scenario.A
         print("self.N in fpvrp: " , self.N)
 
         self.scenario = next_scenario
@@ -189,11 +193,12 @@ class FPVRPSVehInd:
             self.__initialize_variables_batt_constr()
 
     def __initialize_variables(self):
+        print("self cfg A" , self.A)
         self.z = self.mp.addVars(self.N, self.K, self.cfg.T, lb=0, vtype=GRB.BINARY, name='z')   # customer visited?
-        self.y = self.mp.addVars(self.cfg.A, self.K, self.cfg.T, vtype=GRB.BINARY, name='y') # arc usage
+        self.y = self.mp.addVars(self.A, self.K, self.cfg.T, vtype=GRB.BINARY, name='y') # arc usage
         self.z_vecs = self.mp.addVars(self.cfg.T, vtype=GRB.INTEGER, name='z_vecs') # number vecs from node
         self.q = self.mp.addVars(self.C, self.K, self.cfg.T, self.S, vtype=GRB.CONTINUOUS, name='q') # deliveries to users
-        self.u = self.mp.addVars(self.cfg.H, self.K, name='u')
+        self.u = self.mp.addVars(self.cfg.H, self.K, vtype=GRB.BINARY, name='u')
 
 
     def __initialize_variables_batt_constr(self):
@@ -218,12 +223,12 @@ class FPVRPSVehInd:
         self.mp.addConstrs(quicksum(self.z[i, k, t] for k in self.K) <= 1 for i in self.C for t in self.cfg.T)
         print(" .. setting default constraint 4.5  ... ")
         # constraint 4.5.: for every vehicle and time period, one arc has to exit from the nod of every visited node
-        self.mp.addConstrs(quicksum(self.y[i, j, k, t] for j in self.N if (i,j) in self.cfg.A) == self.z[i, k, t]
+        self.mp.addConstrs(quicksum(self.y[i, j, k, t] for j in self.N if (i,j) in self.A) == self.z[i, k, t]
                            for i in self.N for k in self.K for t in self.cfg.T)
 
         print(" .. setting default constraint 4.6  ... ")
         # constraint 4.6. : flow continuity
-        self.mp.addConstrs(quicksum(self.y[i, j, k, t] for j in self.N if (i, j) in self.cfg.A) == quicksum(self.y[j, i, k, t] for j in self.N if (j,i) in self.cfg.A) for i in self.N for k in self.K for t in self.cfg.T)
+        self.mp.addConstrs(quicksum(self.y[i, j, k, t] for j in self.N if (i, j) in self.A) == quicksum(self.y[j, i, k, t] for j in self.N if (j,i) in self.A) for i in self.N for k in self.K for t in self.cfg.T)
         print(" .. setting default constraint 4.8 . ... ")
         # constraint 4.8: total demand
         self.mp.addConstrs(quicksum(self.q[i, k, t, s] for t in self.cfg.T for k in self.K)
@@ -236,73 +241,148 @@ class FPVRPSVehInd:
         self.mp.addConstrs(quicksum(self.u[h, k] for h in self.cfg.H)
                            <= 1 for k in self.K) # die müsste eig. überflüssig sein!
 
-        self.set_max_num_stops()
-        self.set_symmetry_breaking()
+        self.set_max_dist()
+        self.set_symmetry_breaking_u()
+        self.set_symmetry_breaking_z_1()
+        self.set_symmetry_breaking_z_2()
+        # self.set_symmetry_breaking_cx()
+        # self.set_max_num_stops()
+        self.set_time_limit()
+        #self.set_symm_break_lahyani_14()
+       # self.set_log_ineq_lahyani_15()
+        #self.set_log_ineq_lahyani_17()
+        # self.set_log_ineq_lahyani_18()
+        # self.set_log_ineq_lahyani_19()
+        # self.set_rounded_capacity_cut()
 
-    def set_symmetry_breaking(self):
+    def set_symmetry_breaking_u(self):
+        print("... setting symmetry breaking constraint 1")
         self.mp.addConstrs(quicksum(self.u[h,k] for h in self.cfg.H ) >= quicksum(self.u[h, k+1] for h in self.cfg.H ) for k in self.K if k != self.K[-1])
         #self.mp.addConstrs(quicksum(self.z[index_hub, k, t])
+
+    def set_symmetry_breaking_z_1(self): # from Archetti Munoz
+        print("... setting symmetry breaking constraint 2")
+        self.mp.addConstrs(self.z[i,k,t]  <= self.z[index_hub, k,t] for i in self.C for k in self.K for t in self.cfg.T)
+
+    def set_symmetry_breaking_z_2(self): # from Archetti Munoz
+        print("... setting symmetry breaking constraint 3")
+        self.mp.addConstrs(self.z[index_hub, k, t] >= self.z[index_hub, k+1, t] for k in self.K if k != self.K[-1] for t in self.cfg.T)
+
+    def set_ordering_u(self):
+        self.mp.addConstrs(quicksum(self.u[h_1, k-1] for h_1 in self.cfg.H if h_1 <= h) >= self.u[h, k] for h in self.cfg.H for k in self.K if k != 0)
+
+    def set_symm_break_lahyani_14(self):
+        self.mp.addConstrs(quicksum(self.u[h_1, k-1] for h_1 in self.cfg.H if h_1 <= h) >= self.u[h, k] for h in self.cfg.H for k in self.K if k != 0)
+
+        self.mp.addConstrs(self.z[i, k,t] <= quicksum(self.z[j, k-1, t]  for j in self.C if j < i)
+                           + 7 * (1 - self.u[h, k]) + 7 * (1 - self.u[h, k - 1])
+                           for i in self.C for k in self.K if k > 0 for t in self.cfg.T for h in self.cfg.H)
+
+    def set_log_ineq_lahyani_15(self):
+        self.mp.addConstrs(self.z[index_hub, k, t] <= quicksum(self.z[i, k, t] for i in self.C) for k in self.K for t in self.cfg.T)
+
+    def set_log_ineq_lahyani_17(self):
+        self.mp.addConstrs(self.y[i,j,k,t] <= self.z[j,k,t] for (i,j) in self.A for k in self.K for t in self.cfg.T)
+
+    def set_log_ineq_lahyani_18(self):
+        self.mp.addConstrs(quicksum(self.z[i,k,t] for i in self.C) <= quicksum(self.y[i, j, k,t] for (i,j) in self.A) for k in self.K for t in self.cfg.T)
+
+    def set_log_ineq_lahyani_19(self):
+        self.mp.addConstrs((self.z[i,k,t]) <=
+                           quicksum(self.y[i_2,index_hub,k,t] for i_2 in self.C) for i in self.C for k in self.K for t in self.cfg.T)
+
+
+    def set_rounded_capacity_cut(self):
+        # Minimum, nicht Maximum
+        min_required_vehicles = [(math.ceil(sum(self.cfg.W[i,s] for i in self.C) / len(self.cfg.T))/ self.cfg.Q_h_s[h,s])  for s in self.S for h in self.cfg.H]
+
+        min_required_vehicles = [ math.ceil(math.ceil(sum(self.cfg.W[i,s] for i in self.C) / self.cfg.Q_h_s[h,s])/ len(self.cfg.T)) for s in self.S for h in self.cfg.H]
+
+        print("min required vehicles: ", min_required_vehicles)
+        min_required_vecs = math.ceil(max(min_required_vehicles))
+
+        print("min requierd vehicles max" , min_required_vecs)
+
+        self.mp.addConstr(min_required_vecs <= quicksum(self.u[h,k] for k in self.K for h in self.cfg.H))
+
+
+    # def set_symmetry_breaking_cx(self): # todo umformulieren für verschiedene Konfigurationen?
+    #
+    #     # makes sure a fleet ordering  such that each vehicle with smaller index has also a smaller-indexed configuration
+    #     self.mp.addConstrs(quicksum(self.u[h_1, k-1] for h_1 in self.cfg.H if h_1 <= h) >= self.u[h, k] for h in self.cfg.H for k in self.K if k != 0)
+    #
+    #     self.mp.addConstrs(quicksum(self.y[i,j,k,t] * self.cfg.c[i,j] for (i,j) in self.A)  <=
+    #                       quicksum(self.y[i,j,k+1,t] * self.cfg.c[i,j] for (i,j) in self.A)
+    #                       + 200 * (1 - self.u[h,k]) + 200 * (1- self.u[h, k + 1])
+    #                       for k in self.K if k!= self.K[-1] for t in self.cfg.T for h in self.cfg.H)
+
+    # def set_symmetry_breaking_z_3(self): # from Archetti Munoz # todo umformulieren für verschiedene Konfigs? => wollen wir aber ausschließen wg 2^
+    #     self.mp.addCnstrs(quicksum(2 ** (j-i) * self.z[i,k,t] for i in self.C if i <= j) + 500 * (1 - self.u[h, k])
+    #                       >= quicksum(2 ** (j - i) * self.z[i,k+1,t] for i in self.C if i <= j)
+    #                       - 500 * (1 - self.u[h, k]) for j in self.C for k in self.K if k != self.K[-1] for t in self.T for h in self.H)
+
+
 
     def set_max_num_stops(self): # todo => max_stops in config class
         self.mp.addConstrs(quicksum(self.z[i, k, t] for i in self.C ) <= 4 for k in self.K for t in self.cfg.T)
 
     def set_time_limit(self):
-        print("travel times: ", self.cfg.travel_time)
-        self.mp.addConstrs(quicksum(self.y[i, j, k, t] * self.cfg.travel_time[i,j] for i,j in self.cfg.A )
+        print("set time limit")
+        self.mp.addConstrs(quicksum(self.y[i, j, k, t] * self.cfg.travel_time[i,j] for i,j in self.A )
                            + quicksum(self.q[i, k, t, s] * self.cfg.service_time[s] for s in self.cfg.S for i in self.C)
 
                            <= self.cfg.time_limit for k in self.K for t in self.cfg.T)
 
     def set_max_dist(self):  # todo => times & limit in config class
-        print("travel times: ", self.cfg.travel_time)
-        self.mp.addConstrs(quicksum(self.y[i, j, k, t] * self.cfg.c[i, j] for i, j in self.cfg.A)
+        print("set max dist")
+        self.mp.addConstrs(quicksum(self.y[i, j, k, t] * self.cfg.c[i, j] for i, j in self.A)
                            <= self.cfg.range_limit for k in self.K for t in self.cfg.T)
 
-
-    def set_battery_constraints(self):
-        print("... setting battery constraints ... ")
-        self.mp.addConstrs(quicksum(self.l[i, j, k, t, s] for i in self.N if (i,j) in self.cfg.A)
-                           == quicksum(self.l[j, i_2, k, t, s] for i_2 in self.N if (j, i_2) in self.cfg.A) + self.q[j, k, t, s]
-                          for j in self.C for k in self.K for t in self.cfg.T for s in self.S)
-
-        self.mp.addConstrs(self.l[i, index_hub, k, t, s]  == 0
-                           for i in self.N if (i, index_hub) in self.cfg.A for k in self.K for t in self.cfg.T for s in self.S)
-
-
-        self.mp.addConstrs(
-            self.l[i, j, k, t, s] <= (self.y[i, j, k, t]) * 1500
-            for i in self.N for j in self.C if (i, j) in self.cfg.A for k in self.K for t in self.cfg.T for s in self.S)
-
-        for t in self.cfg.T:
-            for k in self.K:
-                for i in self.N:
-                    for j in self.N:
-                        if (i,j) in self.cfg.A:
-
-                            if i == index_hub:
-                                self.mp.addConstr(
-                                    self.full_rng_for_l[i, k, t] - self.cfg.c[i, j] >=
-                                    self.battery[j, k, t] * self.full_rng_for_l[i, k, t] - 5000 * (
-                                            1 - self.y[i, j, k, t]))
-                            elif j == index_hub:
-                                self.mp.addConstr(self.battery[i, k, t] * self.full_rng_for_l[i, k, t] - self.cfg.c[i, j] >=
-                                    - 5000 * (1 - self.y[i, j, k, t]))
-                            else:
-                                self.mp.addConstr(self.battery[i, k, t] * self.full_rng_for_l[i, k, t] -  self.cfg.c[i, j] >=
-                                                  self.battery[j, k, t] * self.full_rng_for_l[i, k, t] - 5000 * (1 - self.y[i, j, k, t]))
-
-
-
-        weights = {'PNC': 0.3, 'WDS' : 1}
-        for t in self.cfg.T:
-            for k in self.K:
-                for i in self.N:
-                    self.mp.addConstr(self.full_rng_for_l[i, k, t] ==
-                                                  funct_weight_to_range(quicksum(self.l[i, j, k, t, s] * weights[s]
-                                                                                 for s in self.cfg.S for j in self.C if (i,j) in self.cfg.A)))
-                # todo: not n?!
-        #self.mp.addConstrs( self.battery[i, k, t] >= 0 for i in [index_hub] for k in self.K for t in self.cfg.T)
-
+    #
+    # def set_battery_constraints(self):
+    #     print("... setting battery constraints ... ")
+    #     self.mp.addConstrs(quicksum(self.l[i, j, k, t, s] for i in self.N if (i,j) in self.A)
+    #                        == quicksum(self.l[j, i_2, k, t, s] for i_2 in self.N if (j, i_2) in self.A) + self.q[j, k, t, s]
+    #                       for j in self.C for k in self.K for t in self.cfg.T for s in self.S)
+    #
+    #     self.mp.addConstrs(self.l[i, index_hub, k, t, s]  == 0
+    #                        for i in self.N if (i, index_hub) in self.A for k in self.K for t in self.cfg.T for s in self.S)
+    #
+    #
+    #     self.mp.addConstrs(
+    #         self.l[i, j, k, t, s] <= (self.y[i, j, k, t]) * 1500
+    #         for i in self.N for j in self.C if (i, j) in self.A for k in self.K for t in self.cfg.T for s in self.S)
+    #
+    #     for t in self.cfg.T:
+    #         for k in self.K:
+    #             for i in self.N:
+    #                 for j in self.N:
+    #                     if (i,j) in self.A:
+    #
+    #                         if i == index_hub:
+    #                             self.mp.addConstr(
+    #                                 self.full_rng_for_l[i, k, t] - self.cfg.c[i, j] >=
+    #                                 self.battery[j, k, t] * self.full_rng_for_l[i, k, t] - 5000 * (
+    #                                         1 - self.y[i, j, k, t]))
+    #                         elif j == index_hub:
+    #                             self.mp.addConstr(self.battery[i, k, t] * self.full_rng_for_l[i, k, t] - self.cfg.c[i, j] >=
+    #                                 - 5000 * (1 - self.y[i, j, k, t]))
+    #                         else:
+    #                             self.mp.addConstr(self.battery[i, k, t] * self.full_rng_for_l[i, k, t] -  self.cfg.c[i, j] >=
+    #                                               self.battery[j, k, t] * self.full_rng_for_l[i, k, t] - 5000 * (1 - self.y[i, j, k, t]))
+    #
+    #
+    #
+    #     weights = {'PNC': 0.3, 'WDS' : 1}
+    #     for t in self.cfg.T:
+    #         for k in self.K:
+    #             for i in self.N:
+    #                 self.mp.addConstr(self.full_rng_for_l[i, k, t] ==
+    #                                               funct_weight_to_range(quicksum(self.l[i, j, k, t, s] * weights[s]
+    #                                                                              for s in self.cfg.S for j in self.C if (i,j) in self.A)))
+    #             # todo: not n?!
+    #     #self.mp.addConstrs( self.battery[i, k, t] >= 0 for i in [index_hub] for k in self.K for t in self.cfg.T)
+    #
 
 
     def set_subtour_elim_constraint(self):
@@ -315,10 +395,6 @@ class FPVRPSVehInd:
 
     def set_constraints(self):
         self.__set_default_constraints()
-
-        if self.with_battery:
-            self.set_battery_constraints()
-
 
 
     def set_objective(self):
@@ -333,7 +409,7 @@ class FPVRPSVehInd:
         # here, you can potentially add further cost factorsself
         self.mp.setObjective(
             quicksum(self.cfg.f[h] * self.u[h,k] for h in self.cfg.H for k in self.K) +
-            quicksum(self.y[i, j, k, t] * self.cfg.c[i, j] for (i, j) in self.cfg.A for t in self.cfg.T for k in self.K))
+            quicksum(self.y[i, j, k, t] * self.cfg.c[i, j] for (i, j) in self.A for t in self.cfg.T for k in self.K))
 
     def solve_model(self):
         self.mp.Params.MIPGap = 0.001  # self.mp.Params.TimeLimit = 5000
@@ -396,15 +472,12 @@ class FPVRPVecIndPreProcess:
 
 class FPVRPVecIndConfg:
 
-    def __init__(self, T, A, W_i, w_i, capa, c, coordinates, S, travel_time, service_time={'WDS':0.0001, 'PNC':0.25}, time_limit=7, stop_limit=5, range_limit=200):
+    def __init__(self, T,  W_i, w_i, capa, c, coordinates, S, travel_time, service_time={'WDS':0.0001, 'PNC':0.25}, time_limit=7, stop_limit=5, range_limit=200):
 
         self.T = T
-        self.A = A
-        print(self.A)
         self.W = W_i # total demand for entire planning horizon (nested dict)
         self.w = w_i # daily demand (nested dict)
-        print(self.w)
-        self.Q = capa
+        # self.Q = capa
 
         self.c = c
         self.coordinates = coordinates
@@ -422,7 +495,7 @@ class FPVRPVecIndConfg:
         self.Q_h_s = {(0,'PNC'):15, (0,'WDS'):1000, (1,'PNC'):30, (1, 'WDS'):750}
         self.Q_bigM = {'PNC':30, 'WDS':1000}
         self.H = [0,1]
-        self.f = {0:3000, 1:4000}
+        self.f = {0:3000, 1:2900}
 
         # self.C_subset_ids = subset_ids
         # self.subset_id_to_C = subset_id_to_C
