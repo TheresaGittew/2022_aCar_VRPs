@@ -33,7 +33,6 @@ def find_shortest_tour_for_d(k_d_to_routelinks):
         for key, traversed_arcs_list in k_d_to_routelinks.items():
             if len(traversed_arcs_list) == min_length and not list(filter(lambda x: x[0] == index_hub, traversed_arcs_list))\
                     and not list(filter(lambda x: x[1] == index_hub, traversed_arcs_list)):
-                        print(" are in first part with ", traversed_arcs_list)
                         k, t = key
                         return (k, t, traversed_arcs_list), '1'
 
@@ -41,8 +40,6 @@ def find_shortest_tour_for_d(k_d_to_routelinks):
 
     min_length = 2
     # #
-    # todo: aktuelle Heuristik ist ja so: es wird das erstbeste routelinks gewählt, das nicht valide ist.
-    # das könnte man noch abändern, sodass z.b. die kürzeste route gewählt wird. (d.h. länge traversed arc list sortieren)
     while min_length < 10:
         for (k,t), traversed_arcs_list in k_d_to_routelinks.items():
             # print("are in min length 2 with the following subtour : ", subtour_dict)
@@ -60,12 +57,8 @@ def find_shortest_tour_for_d(k_d_to_routelinks):
                 next_arc = get_successor(next_arc, traversed_arcs_list)
 
         min_length += 1
-    print("are here")
     return 'Routes i.O.'
 
-
-# # todo wichtige annahme bei der methodik hier: wir fangen mit kürzesten routen an, und eliminieren sie aber für
-# # todo alle Zeitfenster und alle Fahrzeuge!
 
 def find_shortest_invalid_tours(k_d_to_routelinks):
     all_routes = sorted(list(k_d_to_routelinks.values()), key= lambda x: len(x))
@@ -98,21 +91,18 @@ def find_shortest_invalid_tours(k_d_to_routelinks):
 
 
 
-def mycallback(model, where):
+def callback(model, where):
 
     if where == GRB.Callback.MIPSOL:
-        print("\n\n+ + + + next call of callback function + + + +")
+        print("\n\n+ + + + go into callback + + + +")
 
-        # get z
         vals_z = model.cbGetSolution(model._z) # z has dimension i, k, t
         vals_y = model.cbGetSolution(model._y)
         z_indices = tuplelist((i,k,t) for i, k, t in model._z.keys())
         max_t =  max([t for (i,k,t) in z_indices])
         max_k = max([k for (i,k,t) in z_indices])
-        print("max t: " , max_t, " max_k : ", max_k)
+        # print("max t: " , max_t, " max_k : ", max_k)
 
-
-        selected_y = tuplelist(() for i,j,k,t in model._y.keys() if vals_y[i,j,k,t] > 0.5)
         selected_y_keys = [(i,j,k,t) for i,j,k,t in model._y.keys() if vals_y[i,j,k,t] > 0.5]
 
         k_d_to_link = k_d_to_links(selected_y_keys)
@@ -127,30 +117,18 @@ def mycallback(model, where):
                 #print("* * * mycallback has been called. One faulty route has been found. Finish * * *")
 
                 nodes_on_faulty_route = tuple(sorted(list(set([l for sublist in [[i,j] for i,j in next_invalid_tour] for l in sublist]))))
-                if nodes_on_faulty_route in model._faulty_nodes_so_far:
-                    print("CHECK || ", nodes_on_faulty_route, " has already been captured before ! ")
+                # if nodes_on_faulty_route in model._faulty_nodes_so_far:
+                #    print("CHECK || ", nodes_on_faulty_route, " has already been captured before ! ")
                 # print("Nodes on faulty route sorted : " , nodes_on_faulty_route)
                 model._faulty_nodes_so_far.append(nodes_on_faulty_route)
                 duplicates = [item for item, count in collections.Counter(model._faulty_nodes_so_far).items() if count > 1]
-                #print("Duplicates ? ", duplicates)
-                #print("Nodes on faulty route: ", nodes_on_faulty_route)
-
-                # get subsets
-
-                # if error_code == '1':
-                #     pass
-                    # print("Error code 1")
-                    # for i in nodes_on_faulty_route:
-                    #     for k in range(max_k + 1):
-                    #         for t in range(max_t + 1):
-                    #             model.cbLazy(model._z[i,k,t] <= model._z[index_hub, k, t])
 
                 prepr = FPVRPVecIndPreProcess(nodes_on_faulty_route)
                 subset_id_to_A = prepr.get_subset_id_to_A()
                 subset_id_to_C = prepr.get_subset_id_to_C()
                 C_subset_ids = prepr.get_subset_ids()
                 for c_sub_id in C_subset_ids:
-                    print(subset_id_to_C[c_sub_id])
+                   # print(subset_id_to_C[c_sub_id])
                     for i_2 in subset_id_to_C[c_sub_id]:
                         for k in range(max_k+1):
                             for t in range(max_t+1):
@@ -160,20 +138,19 @@ def mycallback(model, where):
                                <= quicksum(model._z[i,k,t] for i in subset_id_to_C[c_sub_id]) - model._z[i_2, k,t])
 
             # print("This is current list with so far identified route sets", model._faulty_nodes_so_far)
-            print(" We now leave the callback \n \n \n")
+            print("Return from callback \n \n \n")
         else:
-            print("* * * mycallback has been called. All routes are ok. Finish * * *")
+            print("* * * All routes are ok. Finish * * *")
 
 
 def funct_weight_to_range(load_weight_total, max_weight=1000, max_range=300, min_range=50):
     return max_range - ((max_range - min_range) / max_weight) * load_weight_total
 
 
-print(funct_weight_to_range(65+(13*0.3)))
 
 class FPVRPSVehInd:
 
-    def __init__(self, input_params, next_scenario, with_battery=False):
+    def __init__(self, input_params, next_scenario):
         self.cfg = input_params
         self.mp = Model('P_VRP')
         self.S = input_params.S
@@ -183,17 +160,12 @@ class FPVRPSVehInd:
         self.K = next_scenario.K
         self.N = next_scenario.N
         self.A = next_scenario.A
-        print("self.N in fpvrp: " , self.N)
 
         self.scenario = next_scenario
         self.__initialize_variables()
 
-        self.with_battery = with_battery
-        if with_battery:
-            self.__initialize_variables_batt_constr()
 
     def __initialize_variables(self):
-        print("self cfg A" , self.A)
         self.z = self.mp.addVars(self.N, self.K, self.cfg.T, lb=0, vtype=GRB.BINARY, name='z')   # customer visited?
         self.y = self.mp.addVars(self.A, self.K, self.cfg.T, vtype=GRB.BINARY, name='y') # arc usage
         self.z_vecs = self.mp.addVars(self.cfg.T, vtype=GRB.INTEGER, name='z_vecs') # number vecs from node
@@ -239,33 +211,38 @@ class FPVRPSVehInd:
                            >= self.z[i, k, t] for i in [index_hub] for k in self.K for t in self.cfg.T)
 
         self.mp.addConstrs(quicksum(self.u[h, k] for h in self.cfg.H)
-                           <= 1 for k in self.K) # die müsste eig. überflüssig sein!
+                           <= 1 for k in self.K)
 
+    def __set_additional_constraints(self):
+        print (" .. setting additional constraints ...")
         self.set_max_dist()
-        self.set_symmetry_breaking_u()
-        self.set_symmetry_breaking_z_1()
-        self.set_symmetry_breaking_z_2()
-        # self.set_symmetry_breaking_cx()
-        # self.set_max_num_stops()
         self.set_time_limit()
-        #self.set_symm_break_lahyani_14()
-       # self.set_log_ineq_lahyani_15()
-        #self.set_log_ineq_lahyani_17()
+        # self.set_max_num_stops()
+
+
+    def __set_valid_inequalities(self):
+        ##
+        print(" .. setting valid inequalities ...")
+        # valid inequalities
+        #self.set_symmetry_breaking_u()
+        #self.set_symmetry_breaking_z_1()
+        #self.set_symmetry_breaking_z_2()
+        # self.set_symmetry_breaking_cx()
+        # self.set_ordering_u()
+        #  self.set_symm_break_lahyani_14()
+        # self.set_log_ineq_lahyani_15()
+        # self.set_log_ineq_lahyani_17()
         # self.set_log_ineq_lahyani_18()
-        # self.set_log_ineq_lahyani_19()
+        self.set_log_ineq_lahyani_19()
         # self.set_rounded_capacity_cut()
 
     def set_symmetry_breaking_u(self):
-        print("... setting symmetry breaking constraint 1")
         self.mp.addConstrs(quicksum(self.u[h,k] for h in self.cfg.H ) >= quicksum(self.u[h, k+1] for h in self.cfg.H ) for k in self.K if k != self.K[-1])
-        #self.mp.addConstrs(quicksum(self.z[index_hub, k, t])
 
     def set_symmetry_breaking_z_1(self): # from Archetti Munoz
-        print("... setting symmetry breaking constraint 2")
         self.mp.addConstrs(self.z[i,k,t]  <= self.z[index_hub, k,t] for i in self.C for k in self.K for t in self.cfg.T)
 
     def set_symmetry_breaking_z_2(self): # from Archetti Munoz
-        print("... setting symmetry breaking constraint 3")
         self.mp.addConstrs(self.z[index_hub, k, t] >= self.z[index_hub, k+1, t] for k in self.K if k != self.K[-1] for t in self.cfg.T)
 
     def set_ordering_u(self):
@@ -291,7 +268,7 @@ class FPVRPSVehInd:
         self.mp.addConstrs((self.z[i,k,t]) <=
                            quicksum(self.y[i_2,index_hub,k,t] for i_2 in self.C) for i in self.C for k in self.K for t in self.cfg.T)
 
-
+    # Todo...
     def set_rounded_capacity_cut(self):
         # Minimum, nicht Maximum
         min_required_vehicles = [(math.ceil(sum(self.cfg.W[i,s] for i in self.C) / len(self.cfg.T))/ self.cfg.Q_h_s[h,s])  for s in self.S for h in self.cfg.H]
@@ -299,27 +276,11 @@ class FPVRPSVehInd:
         min_required_vehicles = [ math.ceil(math.ceil(sum(self.cfg.W[i,s] for i in self.C) / self.cfg.Q_h_s[h,s])/ len(self.cfg.T)) for s in self.S for h in self.cfg.H]
 
         print("min required vehicles: ", min_required_vehicles)
-        min_required_vecs = math.ceil(max(min_required_vehicles))
+        min_required_vecs = math.ceil( min(min_required_vehicles))
 
         print("min requierd vehicles max" , min_required_vecs)
 
         self.mp.addConstr(min_required_vecs <= quicksum(self.u[h,k] for k in self.K for h in self.cfg.H))
-
-
-    # def set_symmetry_breaking_cx(self): # todo umformulieren für verschiedene Konfigurationen?
-    #
-    #     # makes sure a fleet ordering  such that each vehicle with smaller index has also a smaller-indexed configuration
-    #     self.mp.addConstrs(quicksum(self.u[h_1, k-1] for h_1 in self.cfg.H if h_1 <= h) >= self.u[h, k] for h in self.cfg.H for k in self.K if k != 0)
-    #
-    #     self.mp.addConstrs(quicksum(self.y[i,j,k,t] * self.cfg.c[i,j] for (i,j) in self.A)  <=
-    #                       quicksum(self.y[i,j,k+1,t] * self.cfg.c[i,j] for (i,j) in self.A)
-    #                       + 200 * (1 - self.u[h,k]) + 200 * (1- self.u[h, k + 1])
-    #                       for k in self.K if k!= self.K[-1] for t in self.cfg.T for h in self.cfg.H)
-
-    # def set_symmetry_breaking_z_3(self): # from Archetti Munoz # todo umformulieren für verschiedene Konfigs? => wollen wir aber ausschließen wg 2^
-    #     self.mp.addCnstrs(quicksum(2 ** (j-i) * self.z[i,k,t] for i in self.C if i <= j) + 500 * (1 - self.u[h, k])
-    #                       >= quicksum(2 ** (j - i) * self.z[i,k+1,t] for i in self.C if i <= j)
-    #                       - 500 * (1 - self.u[h, k]) for j in self.C for k in self.K if k != self.K[-1] for t in self.T for h in self.H)
 
 
 
@@ -383,18 +344,19 @@ class FPVRPSVehInd:
     #             # todo: not n?!
     #     #self.mp.addConstrs( self.battery[i, k, t] >= 0 for i in [index_hub] for k in self.K for t in self.cfg.T)
     #
-
-
-    def set_subtour_elim_constraint(self):
-        print(" .. setting default constraint 4.7  ... ")
-        subtour_elim_constrs = self.mp.addConstrs(quicksum(self.y[i,j,k,t] for i,j in self.cfg.subset_id_to_A[c_sub_id])
-                          <= quicksum(self.z[i,k,t] for i in self.cfg.subset_id_to_C[c_sub_id]) - self.z[i_2, k,t]
-                          for c_sub_id in self.cfg.C_subset_ids for i_2 in self.cfg.subset_id_to_C[c_sub_id]
-                          for k in self.K for t in self.cfg.T)
-
+    #
+    #
+    # def set_subtour_elim_constraint(self):
+    #     print(" .. setting default constraint 4.7  ... ")
+    #     subtour_elim_constrs = self.mp.addConstrs(quicksum(self.y[i,j,k,t] for i,j in self.cfg.subset_id_to_A[c_sub_id])
+    #                       <= quicksum(self.z[i,k,t] for i in self.cfg.subset_id_to_C[c_sub_id]) - self.z[i_2, k,t]
+    #                       for c_sub_id in self.cfg.C_subset_ids for i_2 in self.cfg.subset_id_to_C[c_sub_id]
+    #                       for k in self.K for t in self.cfg.T)
+    #
 
     def set_constraints(self):
         self.__set_default_constraints()
+        self.__set_valid_inequalities()
 
 
     def set_objective(self):
@@ -415,11 +377,8 @@ class FPVRPSVehInd:
         self.mp.Params.MIPGap = 0.001  # self.mp.Params.TimeLimit = 5000
         self.mp.Params.LazyConstraints = 1
         self.mp.Params.NonConvex = 2
-        self.mp.optimize(mycallback)
+        self.mp.optimize(callback)
         self.print_output()
-
-
-
 
 
     def print_output(self):
@@ -429,8 +388,8 @@ class FPVRPSVehInd:
                 print("Variable: " , v, " Value: " , v.X)
 
         print("Optimal Value : " , self.mp.objVal)
-        print(" + + + ")
-        print("Captured nodes per tour : ", [i for item in self.mp._captured_tours for i in item] )
+      #  print(" + + + ")
+      #  print("Captured nodes per tour : ", [i for item in self.mp._captured_tours for i in item] )
 
 class FPVRPVecIndPreProcess:
 
@@ -438,8 +397,6 @@ class FPVRPVecIndPreProcess:
         # remove 100 (hub index)
         C = [i for i in C if i != index_hub]
 
-
-        print("these are the customers on faulty route: ", C)
         self.C = C
         # print("these are the given arcs : " , A )
         self.max_length_subset = len(self.C)
@@ -456,7 +413,6 @@ class FPVRPVecIndPreProcess:
 
         self.subset_id_to_C = dict((i, self.all_subsets_flattened_list[i]) for i in range(len(self.all_subsets_flattened_list)))
         #print("generated customers per subset: ", self.subset_id_to_C) # for a given set of customers, find all possible subsets for subtour elim constraints
-        # todo ceheck if this works as intended
         self.subset_id_to_A = dict((id, self.__find_arcs_in_subset(self.subset_id_to_C[id])) for id in list(self.subset_id_to_C.keys()))
         #print("generated arcs per subset ", self.subset_id_to_A) # all possible arc combinations for the given subset
 
@@ -492,10 +448,15 @@ class FPVRPVecIndConfg:
         # Todo:
         # currently infos about vehicle configs are manually entered here. we would need to put all of that first into the init-parameters row and then also into an
         # input excel file
-        self.Q_h_s = {(0,'PNC'):15, (0,'WDS'):1000, (1,'PNC'):30, (1, 'WDS'):750}
+        self.Q_h_s = {(0, 'PNC'): 28, (0, 'WDS'): 600, (1, 'PNC'): 25, (1, 'WDS'): 500}
+
+        # self.Q_h_s = {(0, 'PNC'): 50, (0, 'WDS'): 500, (1, 'PNC'): 30, (1, 'WDS'): 750}
+
         self.Q_bigM = {'PNC':30, 'WDS':1000}
+
+
         self.H = [0,1]
-        self.f = {0:3000, 1:2900}
+        self.f = {0: 3000, 1: 2999}
 
         # self.C_subset_ids = subset_ids
         # self.subset_id_to_C = subset_id_to_C

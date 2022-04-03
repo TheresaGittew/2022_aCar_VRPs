@@ -155,16 +155,13 @@ class Scenario():
         self.upper_bound = upper_bound
 
         self.C = [c for c in GIS_inputs.get_customers() if GIS_inputs.get_od_to_dist()[100, c] > lower_bound and GIS_inputs.get_od_to_dist()[100, c] < upper_bound]
-        print("Numer customers total" , len(self.C), " upper bound: ", upper_bound, " lower bound: ", lower_bound)
         random.seed(10)
-        self.C = random.choices(self.C, k=10)
+        self.C = random.choices(self.C, k=15)
         print(self.C)
 
         print("Relevant customers" , self.C)
         self.N = [index_hub] + self.C
         self.K = [k for k in range(self.num_vecs)]
         self.A = [(i,j) for (i,j) in GIS_inputs.get_od_to_dist().keys() if i in self.N and j in self.N ]
-        print("Relevant arcs: ", self.A)
 
-        # Todo! Adjust this so as only relevant arcs are included in self.A!!
 

@@ -1,3 +1,4 @@
+
 import fpvrp_GRBModel_XL as fpvrps
 import fpvrp_PostProcessing as postprocessor
 from fpvrp_RouteVizualizer import PVRP_Vizualizer
@@ -7,17 +8,13 @@ import random
 from itertools import cycle
 
 
-def optimize_scenario(scenario, framework_input, io_excel, with_battery=False):
-    model = fpvrps.FPVRPSVehInd(framework_input, scenario, with_battery)
+def optimize_scenario(scenario, framework_input, io_excel):
+    model = fpvrps.FPVRPSVehInd(framework_input, scenario)
     model.set_constraints()
     model.set_objective()
     model.solve_model()
-    if not with_battery:
-        io_excel.save_gurobi_res_in_excel\
+    io_excel.save_gurobi_res_in_excel\
             ([model.z, model.y, model.q], model.mp.objVal )
-    else:
-        io_excel.save_gurobi_res_in_excel \
-            ([model.z, model.y, model.q, model.l, model.battery, model.full_rng_for_l], model.mp.objVal)
 
 def postprocess_grb_results( scenario, framework_input, io_excel_grb_results, io_excel_processed_results, input_gis):
     grb_results_in_pd_dfs = io_excel_grb_results.get_results_from_excel_to_df(with_multiindex=True)
@@ -61,25 +58,20 @@ input_gis = InputGISReader(relative_path_to_demand='/GIS_Data/ET_Location_Data.c
                            relative_path_to_coors='/GIS_Data/ET_Coordinates.csv',
                            relative_path_to_od_matrix='/GIS_Data/ET_ODs.csv', services=S) # important: stick to order in .csv!
 scenario = Scenario(10, lower_bound=0, upper_bound=300, GIS_inputs=input_gis)
-#relevant_customers = len(scenario.C) / len(input_gis.get_customers())
-
-
-
-print("SUM " , sum(input_gis.get_total_demands()[i, 'WDS'] for i in scenario.C))
-print("SUM PNC " , sum(input_gis.get_total_demands()[i, 'PNC'] for i in scenario.C))
+#relevant_customers = len(scenario.C) / len(input_gis.get_customers()
+#
+#
 #
 framework_input = fpvrps.FPVRPVecIndConfg(T,  W_i = input_gis.get_total_demands(),
                                            w_i= input_gis.get_daily_demands(), capa=vehicle_capa, c =input_gis.get_od_to_dist(),
                                            coordinates=input_gis.get_coors(), S=S, travel_time=input_gis.get_od_to_time())
-#
-# io_excel_withbattery = IOExcel(scenario, root_directory='03-08-Results_FP-VRPs', add_to_folder_title='_Battery', title_excel_to_create_or_read="DecisionvariableValues.xlsx",
-#                     titles_keys_per_dec_var=(['Customer', 'Vehicle', 'Day'], ['O', 'D', 'Vehicle', 'Day'],
-#                                            ['Customer', 'Vehicle', 'Day', 'ServiceType'], ['O','D','Vehicle','Day','Servicetype'], ['Node', 'Vehicle', 'Day'], ['Node', 'Vehicle', 'Day']), output_tab_names=('Z', 'Y', 'Q','L','Battery','Range'))
+
+
 io_excel = IOExcel(scenario, root_directory='03-30-Results_FP-VRPs_XL', add_to_folder_title='_WDS', title_excel_to_create_or_read="DecisionvariableValues.xlsx",
                      titles_keys_per_dec_var=(['Customer', 'Vehicle', 'Day'], ['O', 'D', 'Vehicle', 'Day'],
                                            ['Customer', 'Vehicle', 'Day', 'ServiceType'], ['O','D','Vehicle','Day','Servicetype']), output_tab_names=('Z', 'Y', 'Q'))
 # #
-optimize_scenario(scenario, framework_input, io_excel, with_battery=False)
+optimize_scenario(scenario, framework_input, io_excel)
 
 # # post processing
 excel_for_processed_data = IOExcel(scenario, root_directory='03-24-Results_FP-VRPs_XL', add_to_folder_title='_WDS', title_excel_to_create_or_read="DecisionvariableValues_PP.xlsx")
