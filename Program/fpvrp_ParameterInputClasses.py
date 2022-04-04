@@ -155,8 +155,8 @@ class Scenario():
         self.upper_bound = upper_bound
 
         self.C = [c for c in GIS_inputs.get_customers() if GIS_inputs.get_od_to_dist()[100, c] > lower_bound and GIS_inputs.get_od_to_dist()[100, c] < upper_bound]
-        random.seed(10)
-        self.C = random.choices(self.C, k=15)
+        random.seed(18)
+       # self.C = random.sample(self.C, k=15)
         print(self.C)
 
         print("Relevant customers" , self.C)

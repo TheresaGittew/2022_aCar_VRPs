@@ -224,16 +224,16 @@ class FPVRPSVehInd:
         ##
         print(" .. setting valid inequalities ...")
         # valid inequalities
-        #self.set_symmetry_breaking_u()
-        #self.set_symmetry_breaking_z_1()
-        #self.set_symmetry_breaking_z_2()
+        self.set_symmetry_breaking_u()
+        self.set_symmetry_breaking_z_1()
+        self.set_symmetry_breaking_z_2()
         # self.set_symmetry_breaking_cx()
         # self.set_ordering_u()
-        #  self.set_symm_break_lahyani_14()
+        # self.set_symm_break_lahyani_14()
         # self.set_log_ineq_lahyani_15()
         # self.set_log_ineq_lahyani_17()
         # self.set_log_ineq_lahyani_18()
-        self.set_log_ineq_lahyani_19()
+        # self.set_log_ineq_lahyani_19()
         # self.set_rounded_capacity_cut()
 
     def set_symmetry_breaking_u(self):
@@ -374,7 +374,8 @@ class FPVRPSVehInd:
             quicksum(self.y[i, j, k, t] * self.cfg.c[i, j] for (i, j) in self.A for t in self.cfg.T for k in self.K))
 
     def solve_model(self):
-        self.mp.Params.MIPGap = 0.001  # self.mp.Params.TimeLimit = 5000
+        self.mp.Params.MIPGap = 0.001
+        self.mp.Params.TimeLimit = 172800
         self.mp.Params.LazyConstraints = 1
         self.mp.Params.NonConvex = 2
         self.mp.optimize(callback)
@@ -448,15 +449,15 @@ class FPVRPVecIndConfg:
         # Todo:
         # currently infos about vehicle configs are manually entered here. we would need to put all of that first into the init-parameters row and then also into an
         # input excel file
-        self.Q_h_s = {(0, 'PNC'): 28, (0, 'WDS'): 600, (1, 'PNC'): 25, (1, 'WDS'): 500}
+        # self.Q_h_s = {(0, 'PNC'): 28, (0, 'WDS'): 600, (1, 'PNC'): 25, (1, 'WDS'): 500}
 
-        # self.Q_h_s = {(0, 'PNC'): 50, (0, 'WDS'): 500, (1, 'PNC'): 30, (1, 'WDS'): 750}
+        self.Q_h_s = {(0, 'PNC'): 30, (0, 'WDS'): 700, (1, 'PNC'): 30, (1, 'WDS'): 1000, (1, 'PNC'): 50, (1, 'WDS'): 500}
 
         self.Q_bigM = {'PNC':30, 'WDS':1000}
 
 
         self.H = [0,1]
-        self.f = {0: 3000, 1: 2999}
+        self.f = {0: 10000, 1: 12000, 2:6000}
 
         # self.C_subset_ids = subset_ids
         # self.subset_id_to_C = subset_id_to_C

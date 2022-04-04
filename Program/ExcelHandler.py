@@ -16,6 +16,8 @@ class IOExcel:
         self.root_directory = root_directory
         self.scenario = scenario
 
+
+
         # #
         # create new folder path name for current scenario
         self.path_to_scenario_folder_str = root_directory + '/Scenario_NumVec' \
@@ -40,6 +42,8 @@ class IOExcel:
     def _aux_create_df(self, dictionary, title_of_indices):
         df = pd.DataFrame.from_dict(dictionary, orient='index')
         df.reset_index(level=0, inplace=True)
+        print("Dataframe" , df)
+        print("Title: ", title_of_indices)
         df[title_of_indices] = pd.DataFrame(df['index'].tolist(), index=df.index)
         df.drop(columns=['index'], inplace=True)
         df.rename(columns={0: 'Value'}, inplace=True)
@@ -48,6 +52,7 @@ class IOExcel:
         return df
 
     def save_gurobi_res_in_excel(self, list_result_vars, model_objVal):
+        print(self.titles_keys_per_dec_var)
 
         # #
         # Step 1: Transform all variable dictionaries into  panda dataframes
