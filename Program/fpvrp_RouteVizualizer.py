@@ -64,15 +64,14 @@ class PVRP_Vizualizer():
             try:
                 q = self.q.loc[i, k, self.day_iter, s]
             except KeyError:
-                print("Are in key error for customer, k, day, s: ", i, k, self.day_iter, s)
+                #print("Are in key error for customer, k, day, s: ", i, k, self.day_iter, s)
 
                 entry_available = False
             if entry_available:
-                print("Are here for customer, k, day, s: ", i, k, self.day_iter, s, "load : ", q)
-                plt.text(x_cor + 0.04, y_cor + horizontal_space, s=str(s) + ': ' + str(int(q)),
+                plt.text(x_cor + 0.3, y_cor + horizontal_space, s=str(s) + ': ' + str(int(q)),
                          c=self.colors_for_services[s],
                          alpha=1, fontsize=10)
-                horizontal_space -= 0.03
+                horizontal_space -= 0.3  # 0.03
 
 
     def _plot_routes_for_one_day(self, vehicle_to_routes_current_day):
@@ -115,6 +114,8 @@ class PVRP_Vizualizer():
             plt.text(self.framework_input.coordinates[0][c] + 0.005, self.framework_input.coordinates[1][c], s='C ' + str(c),
                      c='C1')
 
+        plt.scatter([10,0],[10,0], c='white')
+
     def __plot_legend_and_labels(self):
         ##
         # labels
@@ -143,7 +144,7 @@ class PVRP_Vizualizer():
         plt.clf()
 
     def plot_active_cust(self):
-        self.__setup_route_iterator(5)
+        self.__setup_route_iterator(len(self.framework_input.T))
         plt.figure(figsize=(12, 8), dpi=80)
         self.__plot_hubs_and_customers()
         self.__plot_legend_and_labels()
@@ -152,7 +153,7 @@ class PVRP_Vizualizer():
     def plot_routes(self):
 
 
-        self.__setup_route_iterator(5)
+        self.__setup_route_iterator(len(self.framework_input.T))
 
         vehicle_routes_for_current_day = self._get_dict_vehicle_to_routes_for_current_day()
 

@@ -1,9 +1,10 @@
 from Program.Deprecated import DEPR_ReadNilsInputFiles as dp, SETUP_and_IO as setio
+import numpy as np
 
 A = ['Ernie', 'Bert', 'Bibo']
 B = ['green', 'yellow', 'blue']
 C = [4,8, 14]
-path_demand_file = '/Users/theresawettig/PycharmProjects/2022_aCar_VRPs/GIS_Data/11-19-21_EXAMPLE_DemandList2.csv'
+path_demand_file = '/GIS_Data/Deprecated/11-19-21_EXAMPLE_DemandList2.csv'
 path_results = 'Deprecated/Results/Scenario_NumVec2-LBs35-UBs80/DecisionvariableValues.xlsx'
 
 
@@ -92,3 +93,5 @@ ind = pds_csv_with_multi.index[(pds_csv_with_multi['ED']=='1637,105397') & (pds_
 print("Found this" , ind)
 pds_csv_with_multi.drop(index=ind, inplace=True)
 print(pds_csv_with_multi)
+
+print(np.sqrt([9]))

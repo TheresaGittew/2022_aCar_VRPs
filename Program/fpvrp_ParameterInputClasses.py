@@ -1,15 +1,17 @@
 import os
 import pandas as pd
+import numpy as np
 import random
 index_hub = 100
 
+# real set:
+# {'WDS': (lambda x: x * 0.25),'ELEC': (lambda x: x * 0.25),'ED': (lambda x: x * 0.25),'PNC': (lambda y: y * 3 / 52)}
+
 class InputGISReader:
 
-    def __init__(self, relative_path_to_demand='/GIS_Data/ET_Location_Data.csv',
+    def __init__(self, daily_demand_factors, functions_to_consumption_per_T, relative_path_to_demand='/GIS_Data/ET_Location_Data.csv',
                  relative_path_to_coors='/GIS_Data/ET_Coordinates.csv',
-                 relative_path_to_od_matrix='/GIS_Data/ET_ODs.csv', services=('WDS','ELEC','ED','PNC'),
-                 daily_demand_factors={'WDS':1,'ELEC':1,'ED':1,'PNC':1},
-                 functions_to_consumption_per_T={'WDS': (lambda x: x * 0.25),'ELEC': (lambda x: x * 0.25),'ED': (lambda x: x * 0.25),'PNC': (lambda y: y * 3 / 52)}):
+                 relative_path_to_od_matrix='/GIS_Data/ET_ODs.csv', services=('WDS','ELEC','ED','PNC')):
 
         self.rltv_path_to_demand = relative_path_to_demand
         self.rltv_path_to_coors = relative_path_to_coors
@@ -24,6 +26,7 @@ class InputGISReader:
         self._read_coordinates()
 
         self._read_matrix()
+        #self._create_matrix()
 
         self._read_demand_data()
         self._map_demand_data()
@@ -45,14 +48,15 @@ class InputGISReader:
         path_to_real_demand = self.root_directory_project + self.rltv_path_to_demand
 
         pds_csv_wide = pd.read_csv(path_to_real_demand, delimiter=';')
+
+
+        pds_narrow = pds_csv_wide.melt(id_vars='ClusterId', var_name='Service_type')
         # Now we have this:
         #           ClusterId  Service_type    value
         # 0            2          WDS          2806,157477
         # 1            4          WDS          1501,658731
 
-        pds_narrow = pds_csv_wide.melt(id_vars='ClusterId', var_name='Service_type')
         pds_cols_to_indices = pds_narrow.set_index(['ClusterId','Service_type'])
-
         # Now we have this:
         #                            value
         # ClusterId  Service_type
@@ -79,8 +83,12 @@ class InputGISReader:
 
 
     def _create_daily_demands(self):
+        print(self.daily_demand_factors)
         self.dict_i_s_to_daily_demand = dict(((cust, service), v * self.daily_demand_factors[service])
                                              for (cust, service), v in self.dict_i_s_to_total_demand.items())
+        print("total demands , ", self.dict_i_s_to_total_demand)
+        print("\n \n")
+        print("daily demands" ,self.dict_i_s_to_daily_demand)
 
     def get_daily_demands(self):
         return self.dict_i_s_to_daily_demand
@@ -117,6 +125,20 @@ class InputGISReader:
         self.dict_duration = dict['DURATION_H']
         self.dict_distance = dict['DIST_KM']
 
+    # alternative function to generate origin destination matrix (distances) in case it is not given
+    # times are estimated
+    # usually not used
+    def _euclidean_distance(self, i,j):
+        x_distance = abs(self.coordinates_dict_x[i] - self.coordinates_dict_x[j])
+        y_distance = abs(self.coordinates_dict_y[i] - self.coordinates_dict_y[j])
+        return round(np.sqrt([x_distance ** 2 + y_distance ** 2])[0],2)
+
+    def _create_matrix(self):
+        tempo = 40  # km / h
+        self.dict_distance = dict(((i,j), self._euclidean_distance(i,j)) for i in self.customers + [index_hub] for j in self.customers + [index_hub] if i != j)
+        self.dict_duration = dict(((i,j), self.dict_distance[i,j] / tempo) for i in self. customers+ [index_hub] for j in self.customers + [index_hub] if i != j)
+        print(self.dict_distance)
+
     def get_od_to_time(self):
         return self.dict_duration
 
@@ -126,19 +148,6 @@ class InputGISReader:
 
 
 
-class DummyForExcelInterface:
-
-    def __init__(self):
-        self.num_days = 5
-        self.T = [i for i in range(self.num_days)]
-        self.S = ['WDS','PNC']  # important: stick to order in csv file!
-        # self.S = ['WDS']
-        capacities = {'WDS': 1000}
-        #self.vehicle_capa = dict(((i, c), capacities[c]) for i in range(15) for c in list(capacities.keys()))
-
-    #
-    def get_vehiclecapa_numdays_S(self):
-        return 0, self.T, self.S
 
 
 class Scenario():
@@ -148,16 +157,19 @@ class Scenario():
     #            arcs_list[0, c][1] > min_distance_bekoji and arcs_list[0, c][1] < max_distance_bekoji]
     #     return lis
 
-    def __init__(self, number_vehicles, lower_bound, upper_bound, GIS_inputs, size=10): # todo remove T
+    def __init__(self, number_vehicles, lower_bound, upper_bound, GIS_inputs, c=[]): # todo remove T
 
         self.num_vecs = number_vehicles
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
+        #print(GIS_inputs.get_customers())
+        #print(GIS_inputs.get_od_to_dist())
 
         self.C = [c for c in GIS_inputs.get_customers() if GIS_inputs.get_od_to_dist()[100, c] > lower_bound and GIS_inputs.get_od_to_dist()[100, c] < upper_bound]
-        random.seed(18)
-       # self.C = random.sample(self.C, k=15)
-        print(self.C)
+        #self.C = c
+        #print(self.C)
+        #self.C = [c for c in GIS_inputs.get_customers() if GIS_inputs.get_od_to_dist()[100, c] > lower_bound and GIS_inputs.get_od_to_dist()[100, c] < upper_bound]
+
 
         print("Relevant customers" , self.C)
         self.N = [index_hub] + self.C

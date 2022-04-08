@@ -2,8 +2,7 @@
 import fpvrp_GRBModel_XL as fpvrps
 import fpvrp_PostProcessing as postprocessor
 from fpvrp_RouteVizualizer import PVRP_Vizualizer
-from fpvrp_ParameterInputClasses import InputGISReader, Scenario
-from input_interface import DummyForExcelInterface_ET, DummyForExcelInterface_IC
+from fpvrp_ParameterInputClasses import InputGISReader, Scenario, DummyForExcelInterface
 from ExcelHandler import IOExcel
 import random
 from itertools import cycle
@@ -47,47 +46,46 @@ def vizualize_results(scenario, framework_input, io_excel, root_directory_saving
     grb_results_in_pd_dfs = io_excel.get_results_from_excel_to_df(with_multiindex=True)
 
     vizualizer = PVRP_Vizualizer(framework_input, scenario, grb_results_in_pd_dfs, root_directory_savings)
-    #vizualizer.plot_routes()
+    vizualizer.plot_routes()
     vizualizer.plot_active_cust()
 
 
 # #
 # constructing basic input objects (input_gis info; scenario info; general "paramter" info)
-input_data_case = DummyForExcelInterface_ET().get_vehiclecapa_numdays_S() # to be replaced by class which extracts from excel file
-input_gis = InputGISReader(input_data_case.daily_demand_factors[0], input_data_case.functions_to_consumption_per_T,
-                           relative_path_to_demand='/GIS_Data/ET_Location_Data_WDS_ELEC_PNC.csv',
-                           relative_path_to_coors='/GIS_Data/ET_Coordinates.csv',
-                           relative_path_to_od_matrix='/GIS_Data/ET_ODs.csv', services=input_data_case.S) # important: stick to order in .csv!
+vehicle_capa, T, S = DummyForExcelInterface().get_vehiclecapa_numdays_S() # to be replaced by class which extracts from excel file
+T = [0,1,2]
+print(S)
+input_gis = InputGISReader(relative_path_to_demand='/IllustrativeExample/IE_DemandData.csv',
+                           relative_path_to_coors='/IllustrativeExample/IE_Coordinates.csv',
+                           relative_path_to_od_matrix='/', services=S) # important: stick to order in .csv!
 
-total_demand = sum([value for key,value in input_gis.get_total_demands().items() if key[1] == 'ELEC'])
-#print(total_demand)
-#
-scenario = Scenario(20, lower_bound=0, upper_bound=300, GIS_inputs=input_gis)
-relevant_customers = len(scenario.C) / len(input_gis.get_customers())
-#
-#
-framework_input = fpvrps.FPVRPVecIndConfg(input_data_case.T, W_i = input_gis.get_total_demands(),
-                                          w_i= input_gis.get_daily_demands(), c =input_gis.get_od_to_dist(),
-                                          coordinates=input_gis.get_coors(), S=input_data_case.S, H=input_data_case.H, travel_time=input_gis.get_od_to_time(),
-                                          Q_h_s=input_data_case.Q_h_s, fixed_costs_h=input_data_case.fixed_costs, service_time=input_data_case.service_times)
 
-#print(input_gis.get_total_demands())
+input_gis.get_customers()
+print("DEMANDS" ,input_gis.get_daily_demands(), " TOTAL : ", input_gis.get_total_demands())
+scenario = Scenario(4, lower_bound=0, upper_bound=300, GIS_inputs=input_gis, c=[])
+#relevant_customers = len(scenario.C) / len(input_gis.get_customers()
 #
-io_excel = IOExcel(scenario, root_directory='04-08-CaseStudy', add_to_folder_title='', title_excel_to_create_or_read="DecisionvariableValues.xlsx",
+#
+#
+framework_input = fpvrps.FPVRPVecIndConfg(T,  W_i = input_gis.get_total_demands(),
+                                           w_i= input_gis.get_daily_demands(), capa=vehicle_capa, c =input_gis.get_od_to_dist(),
+                                           coordinates=input_gis.get_coors(), S=S, travel_time=input_gis.get_od_to_time())
+
+
+io_excel = IOExcel(scenario, root_directory='04-07-IllstrExample', add_to_folder_title='_2', title_excel_to_create_or_read="DecisionvariableValues.xlsx",
                      titles_keys_per_dec_var=(['Customer', 'Vehicle', 'Day'], ['O', 'D', 'Vehicle', 'Day'],
                                            ['Customer', 'Vehicle', 'Day', 'ServiceType'],['ConfigType','Vehicle']), output_tab_names=('Z', 'Y', 'Q','U'))
 # #
 optimize_scenario(scenario, framework_input, io_excel)
-#
-# # # post processing
-excel_for_processed_data = IOExcel(scenario, root_directory='04-08-CaseStudy', add_to_folder_title='_', title_excel_to_create_or_read="DecisionvariableValues_PP.xlsx",
+
+# # post processing
+excel_for_processed_data = IOExcel(scenario, root_directory='04-07-IllstrExample', add_to_folder_title='_2',  title_excel_to_create_or_read="DecisionvariableValues_PP.xlsx",
                      titles_keys_per_dec_var=(['Customer', 'Vehicle', 'Day'], ['O', 'D', 'Vehicle', 'Day'],
                                            ['Customer', 'Vehicle', 'Day', 'ServiceType'],['ConfigType','Vehicle']), output_tab_names=('Z', 'Y', 'Q','U'))
 
-#
 postprocess_grb_results(scenario, framework_input, io_excel, excel_for_processed_data, input_gis)
-# #
-vizualize_results(scenario, framework_input, io_excel, io_excel.get_path_str_for_scenario())
 #
+vizualize_results(scenario, framework_input, io_excel, io_excel.get_path_str_for_scenario())
+
 
 
