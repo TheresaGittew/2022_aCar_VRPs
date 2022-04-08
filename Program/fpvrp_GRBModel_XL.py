@@ -357,6 +357,7 @@ class FPVRPSVehInd:
     def set_constraints(self):
         self.__set_default_constraints()
         self.__set_valid_inequalities()
+        self.__set_additional_constraints()
 
 
     def set_objective(self):
@@ -374,8 +375,8 @@ class FPVRPSVehInd:
             quicksum(self.y[i, j, k, t] * self.cfg.c[i, j] for (i, j) in self.A for t in self.cfg.T for k in self.K))
 
     def solve_model(self):
-        self.mp.Params.MIPGap = 0.001
-        self.mp.Params.TimeLimit = 172800
+        self.mp.Params.MIPGap = 0.05
+        self.mp.Params.TimeLimit = 259200
         self.mp.Params.LazyConstraints = 1
         self.mp.Params.NonConvex = 2
         self.mp.optimize(callback)
@@ -429,7 +430,8 @@ class FPVRPVecIndPreProcess:
 
 class FPVRPVecIndConfg:
 
-    def __init__(self, T,  W_i, w_i, capa, c, coordinates, S, travel_time, service_time={'WDS':0.0001, 'PNC':0.25}, time_limit=7, stop_limit=5, range_limit=200):
+    def __init__(self, T,  W_i, w_i, c, coordinates, S, H, travel_time, Q_h_s, fixed_costs_h, service_time,
+                 time_limit=8, stop_limit=5, range_limit=250):
 
         self.T = T
         self.W = W_i # total demand for entire planning horizon (nested dict)
@@ -442,26 +444,16 @@ class FPVRPVecIndConfg:
         self.travel_time = travel_time
 
         self.service_time = service_time
+        #print("self service time ", self.service_time)
         self.time_limit = time_limit
         self.stop_limit = stop_limit
         self.range_limit = range_limit
 
-        # Todo:
-        # currently infos about vehicle configs are manually entered here. we would need to put all of that first into the init-parameters row and then also into an
-        # input excel file
-        # self.Q_h_s = {(0, 'PNC'): 28, (0, 'WDS'): 600, (1, 'PNC'): 25, (1, 'WDS'): 500}
+        self.H = H
+        self.Q_h_s = Q_h_s
+        self.Q_bigM = dict((s, max(self.Q_h_s[h,s] for h in self.H)) for s in self.S)
+        self.f = fixed_costs_h
 
-        self.Q_h_s = {(0, 'PNC'): 30, (0, 'WDS'): 700, (1, 'PNC'): 30, (1, 'WDS'): 1000, (1, 'PNC'): 50, (1, 'WDS'): 500}
-
-        self.Q_bigM = {'PNC':30, 'WDS':1000}
-
-
-        self.H = [0,1]
-        self.f = {0: 10000, 1: 12000, 2:6000}
-
-        # self.C_subset_ids = subset_ids
-        # self.subset_id_to_C = subset_id_to_C
-        # self.subset_id_to_A = subset_id_to_A
 
 
 
