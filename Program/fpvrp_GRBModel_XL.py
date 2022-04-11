@@ -217,7 +217,7 @@ class FPVRPSVehInd:
         print (" .. setting additional constraints ...")
         self.set_max_dist()
         self.set_time_limit()
-        # self.set_max_num_stops()
+        self.set_max_num_stops()
 
 
     def __set_valid_inequalities(self):
@@ -431,7 +431,7 @@ class FPVRPVecIndPreProcess:
 class FPVRPVecIndConfg:
 
     def __init__(self, T,  W_i, w_i, c, coordinates, S, H, travel_time, Q_h_s, fixed_costs_h, service_time,
-                 time_limit=8, stop_limit=5, range_limit=250):
+                 time_limit=8, stop_limit=5, range_limit=300):
 
         self.T = T
         self.W = W_i # total demand for entire planning horizon (nested dict)
