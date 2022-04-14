@@ -132,7 +132,7 @@ def create_customer_sets(distance_limits, customer_groups_shuffled, total_numb_c
 # 8 parallel scenarios, each of them defined by lb and ub
 
 # Dran denken! Wenn slice gewählt, neues root directory angeben
-c = CaseStudy_INPUT(0, slice=slice)
+# c = CaseStudy_INPUT(0)
 
 
 
