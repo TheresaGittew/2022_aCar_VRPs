@@ -10,7 +10,7 @@ class IOExcel:
     def get_path_str_for_scenario(self):
         return self.path_to_scenario_folder_str
 
-    def __init__(self, scenario, root_directory, add_to_folder_title='', title_excel_to_create_or_read ="DecisionvariableValues.xlsx",
+    def __init__(self, scenario, root_directory, scenario_id, add_to_folder_title='', title_excel_to_create_or_read ="DecisionvariableValues.xlsx",
                  titles_keys_per_dec_var=(['Customer', 'Vehicle', 'Day'], ['O', 'D', 'Vehicle', 'Day'],
                                                 ['Customer', 'Vehicle', 'Day', 'ServiceType']), output_tab_names=('Z', 'Y', 'Q')):
         self.root_directory = root_directory
@@ -20,8 +20,7 @@ class IOExcel:
 
         # #
         # create new folder path name for current scenario
-        self.path_to_scenario_folder_str = root_directory + '/Scenario_NumVec' \
-                                           + str(scenario.num_vecs) + '-LBs' + str(scenario.lower_bound) + '-UBs' + str(scenario.upper_bound) +'' + add_to_folder_title +'/'
+        self.path_to_scenario_folder_str = root_directory + '/scenario_' + str(scenario_id) + add_to_folder_title+'/'
 
         # #
         # create new folder for current scenario
@@ -42,8 +41,8 @@ class IOExcel:
     def _aux_create_df(self, dictionary, title_of_indices):
         df = pd.DataFrame.from_dict(dictionary, orient='index')
         df.reset_index(level=0, inplace=True)
-        print("Dataframe" , df)
-        print("Title: ", title_of_indices)
+       # print("Dataframe" , df)
+        #print("Title: ", title_of_indices)
         df[title_of_indices] = pd.DataFrame(df['index'].tolist(), index=df.index)
         df.drop(columns=['index'], inplace=True)
         df.rename(columns={0: 'Value'}, inplace=True)
@@ -51,7 +50,7 @@ class IOExcel:
         df = df[df['Value'] > 0.001]
         return df
 
-    def save_gurobi_res_in_excel(self, list_result_vars, model_objVal):
+    def save_gurobi_res_in_excel(self, list_result_vars, model_objVal, model_runtime):
         print(self.titles_keys_per_dec_var)
 
         # #
@@ -65,9 +64,9 @@ class IOExcel:
 
         # #
         # Step 2: save results in Excel file
-        self.save_df_res_in_excel(dfs_output_dec_vars, model_objVal)
+        self.save_df_res_in_excel(dfs_output_dec_vars, model_objVal, model_runtime)
 
-    def save_df_res_in_excel(self, dfs_output_dec_vars, objVal):
+    def save_df_res_in_excel(self, dfs_output_dec_vars, objVal, model_runtime):
 
         # #
         #   Write the panda dataframes into excel file
@@ -77,8 +76,8 @@ class IOExcel:
             dfs_output_dec_vars[i].to_excel(writer, self.output_tab_names[i])
 
         # #
-        # Step 3: Write objective value to pd dataframe and save
-        pd.DataFrame([objVal]).to_excel(writer, 'objVal')
+        # Step 3: Write objective value + time to pd dataframe and save
+        pd.DataFrame([objVal, model_runtime]).to_excel(writer, 'objVal')
         writer.save()
 
     # If we create new results, save them to excel and read the results in the same run, the
@@ -87,6 +86,7 @@ class IOExcel:
     # we have to hand over the name of that excel file again
     def get_path_to_excel_file(self):
         return self.path_to_scenario_folder_str + self.title_excel_to_create_or_read
+
 
     def get_obj_val_from_excel(self, tab_name='objVal'):
         #writer = pd.ExcelWriter(self.path_to_scenario_folder_str + self.title_excel_to_create_or_read, engine='xlsxwriter')
@@ -116,7 +116,7 @@ class IOExcel:
             for i in range(len(self.output_tab_names)):
                 next_df = dict_decvar_str_to_df[self.output_tab_names[i]]
                 next_df = next_df.set_index(self.titles_keys_per_dec_var[i])
-                print(next_df)
+                #prprint(next_df)
                 dict_decvar_str_to_df[self.output_tab_names[i]] = next_df
 
 

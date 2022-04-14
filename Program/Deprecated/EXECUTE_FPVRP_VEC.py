@@ -43,7 +43,7 @@ for next_scenario in scenarios:
 
     input = optimizer.FPVRPVecIndConfg(T, A, total_demands_nested_dict, daily_max_demand_nested_dict, capa_for_vrps, od_matrix_with_distances, coordinates, S,0,0,0)
 
-    model = optimizer.FPVRPSVehInd(input, next_scenario)
+    model = optimizer.VRP_VBS_Optimizer(input, next_scenario)
     model.set_constraints()
     model.set_objective()
     model.solve_model()

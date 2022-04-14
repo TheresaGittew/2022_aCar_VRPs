@@ -66,9 +66,11 @@ pds_narrow = pds_csv.melt(id_vars='ClusterId', var_name='Service_type')
 print(pds_narrow)
 pds_cols_to_indices = pds_narrow.set_index(['ClusterId','Service_type'])
 print(pds_cols_to_indices)
+
 relevant_rows = pds_cols_to_indices.loc[(2),:]
 print(pds_cols_to_indices)
-#print(relevant_rows)
+print("LOC")
+print(relevant_rows)
 res = pds_cols_to_indices.drop(index =('WDS'), level=1)
 print(res)
 

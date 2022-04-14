@@ -9,7 +9,7 @@ from itertools import cycle
 
 
 def optimize_scenario(scenario, framework_input, io_excel):
-    model = fpvrps.FPVRPSVehInd(framework_input, scenario)
+    model = fpvrps.VRP_VBS_Optimizer(framework_input, scenario)
     model.set_constraints()
     model.set_objective()
     model.solve_model()

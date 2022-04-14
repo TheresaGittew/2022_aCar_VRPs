@@ -69,10 +69,8 @@ class RouteValidation():
             return built_arcs, faulty_arc_list_rest
         else:
             built_arcs.append(next_link)
-            # print("HERE WITH ", faulty_arc_list_rest,  "built arcs " , built_arcs, "next elem to add: ", next_link)
             if next_link in faulty_arc_list_rest: faulty_arc_list_rest.remove(next_link)
             next_link = next(filter(lambda x: x[0] == next_link[1], faulty_arc_list_rest), None)
-            # print("Next link: ", next_link)
             return self._find_main_route(faulty_arc_list_rest, built_arcs, next_link)
 
 
@@ -183,7 +181,7 @@ class FPVRPPostProcessor():
             # v looks like this: [[25.0, 14, 0, 0, 'PNC'], [61.8, 14, 0, 0, 'WDS'], [82.6, 15, 0, 0, 'WDS']]
             for i in v:
                 vehicle, day = k
-                print(i)
+                # print(i)
                 customer = i[1]
                 service_type = i[4]
                 self.dict_customer_vec_day_to_q[customer, vehicle, day, service_type] = i[0]  # eg, remove the other elements like (k, t)-columns
@@ -215,7 +213,7 @@ class FPVRPPostProcessor():
             res = RouteValidation(v).get_status()
             if not res:
                 self.faulty_routes.append((k, v))
-        print("faulty routes" , self.faulty_routes)
+        # print("faulty routes" , self.faulty_routes)
         return self.faulty_routes
 
 
@@ -232,7 +230,7 @@ class FPVRPPostProcessor():
             corrected_route = RouteValidation(faulty_route).correct_faulty_routes()
             self.additional_distance_after_adjust += self._get_additional_costs_through_cor_route(faulty_route, corrected_route)
             y_dict[k, d] = corrected_route
-        print("** Done ** \n ")
+       # print("** Done ** \n ")
         self.dict_decvarstr_to_dict_vehicleday_to_val[relevant_var] = y_dict
         #print(self.vehicle_day_to_arcs)
 

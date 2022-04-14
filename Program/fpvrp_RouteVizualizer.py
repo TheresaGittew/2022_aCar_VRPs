@@ -11,7 +11,7 @@ class PVRP_Vizualizer():
     def __init__(self, framework_input, scenario, dicts_to_grb_dataframes_with_multiindex, root_directory_for_saving):
         self.scenario = scenario
         self.path_for_saving = root_directory_for_saving
-        self.max_days = len(framework_input.T)
+        self.max_days = 5
         self.framework_input = framework_input
         self.dicts_to_grb_dataframes_with_multiindex = dicts_to_grb_dataframes_with_multiindex
 
@@ -40,38 +40,41 @@ class PVRP_Vizualizer():
         if self.day_iter == self.max_days - 1: return 'END'
         else:
             self.day_iter += 1
-            my_index = (slice(None), slice(None), slice(None), self.day_iter)
-            df_sub = self.y.loc[(my_index), :]
 
-            # returns: [(1, 0, 11, 4), (12, 44, 11, 4),,. (or, dest, vec, day) ...
-            indices_o_d_vehicle_day = df_sub.index.values.tolist()
-            print(indices_o_d_vehicle_day)
+            keyError = False
+            try:
+                my_index = (slice(None), slice(None), slice(None), self.day_iter)
+                df_sub = self.y.loc[(my_index), :]
+            except KeyError:
+                return []
+            if not keyError:
 
-            # only takes the first two elements of each tuple element
-            # returns: {11: (0,1), 11: (1,14), 11: (14, 18), ..}
-            dict_vehicle_to_routes_current_day = dict((veh, list(map(lambda x2: (x2[0], x2[1]),
-                                                                     filter(lambda x: x[2] == veh, indices_o_d_vehicle_day)))) for (orig, dest, veh, day) in indices_o_d_vehicle_day)
-            print(dict_vehicle_to_routes_current_day)
-            return dict_vehicle_to_routes_current_day
+                # returns: [(1, 0, 11, 4), (12, 44, 11, 4),,. (or, dest, vec, day) ...
+                indices_o_d_vehicle_day = df_sub.index.values.tolist()
+               # print(indices_o_d_vehicle_day)
+
+                # only takes the first two elements of each tuple element
+                # returns: {11: (0,1), 11: (1,14), 11: (14, 18), ..}
+                dict_vehicle_to_routes_current_day = dict((veh, list(map(lambda x2: (x2[0], x2[1]),
+                                                                         filter(lambda x: x[2] == veh, indices_o_d_vehicle_day)))) for (orig, dest, veh, day) in indices_o_d_vehicle_day)
+              #  print(dict_vehicle_to_routes_current_day)
+                return dict_vehicle_to_routes_current_day
+
 
     def _write_q(self, x_cor, y_cor,  i, k):
         horizontal_space = 0
 
         for s in self.framework_input.S:
             entry_available = True
-
-            print("next s: ", s)
             try:
                 q = self.q.loc[i, k, self.day_iter, s]
             except KeyError:
-                #print("Are in key error for customer, k, day, s: ", i, k, self.day_iter, s)
-
                 entry_available = False
             if entry_available:
-                plt.text(x_cor + 0.3, y_cor + horizontal_space, s=str(s) + ': ' + str(int(q)),
+                plt.text(x_cor + 0.03, y_cor + horizontal_space, s=str(s) + ': ' + str(int(q)), # todo:for example change to 0.3
                          c=self.colors_for_services[s],
                          alpha=1, fontsize=10)
-                horizontal_space -= 0.3  # 0.03
+                horizontal_space -=  0.03 # 0.3 #todo: change to 0.3 for illst exampl.
 
 
     def _plot_routes_for_one_day(self, vehicle_to_routes_current_day):
@@ -80,7 +83,6 @@ class PVRP_Vizualizer():
         # get all info the next day to print
         this_day = self.day_iter
         for vehicle, route in vehicle_to_routes_current_day.items():
-            print("We are here on day" , self.day_iter, " with vehicle " , vehicle , " and route ", route)
 
             color = next(self.colors_for_routes)
             for (i, j) in route:
@@ -94,7 +96,6 @@ class PVRP_Vizualizer():
                 # #
                 # 2: Write down the transported quantity per service type
                 #
-                print("next customer : " , i)
                 self._write_q(nodes_x_cors[i], nodes_y_cors[i],  i, vehicle)
                 # #
 
@@ -114,7 +115,7 @@ class PVRP_Vizualizer():
             plt.text(self.framework_input.coordinates[0][c] + 0.005, self.framework_input.coordinates[1][c], s='C ' + str(c),
                      c='C1')
 
-        plt.scatter([10,0],[10,0], c='white')
+        #plt.scatter([10,0],[10,0], c='white')
 
     def __plot_legend_and_labels(self):
         ##
@@ -161,7 +162,7 @@ class PVRP_Vizualizer():
 
             plt.figure(figsize=(12, 8), dpi=80)
             self.__plot_hubs_and_customers()
-            self._plot_routes_for_one_day(vehicle_routes_for_current_day)
+            if vehicle_routes_for_current_day: self._plot_routes_for_one_day(vehicle_routes_for_current_day)
             self.__plot_legend_and_labels()
             self.__save_and_clear()
 

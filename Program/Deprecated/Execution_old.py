@@ -10,7 +10,7 @@ from itertools import cycle
 
 
 def optimize_scenario(scenario, framework_input, io_excel):
-    model = fpvrps.FPVRPSVehInd(framework_input, scenario)
+    model = fpvrps.VRP_VBS_Optimizer(framework_input, scenario)
     model.set_constraints()
     model.set_objective()
     model.solve_model()
@@ -53,16 +53,16 @@ def vizualize_results(scenario, framework_input, io_excel, root_directory_saving
 
 # #
 # constructing basic input objects (input_gis info; scenario info; general "paramter" info)
-input_data_case = DummyForExcelInterface_IC().get_vehiclecapa_numdays_S() # to be replaced by class which extracts from excel file
+input_data_case = DummyForExcelInterface_ET().get_vehiclecapa_numdays_S() # to be replaced by class which extracts from excel file
 input_gis = InputGISReader(input_data_case.daily_demand_factors[0], input_data_case.functions_to_consumption_per_T,
-                           relative_path_to_demand='/GIS_Data/IC_Location_Data.csv',
-                           relative_path_to_coors='/GIS_Data/IC_Coordinates.csv',
-                           relative_path_to_od_matrix='/GIS_Data/IC_ODs.csv', services=input_data_case.S) # important: stick to order in .csv!
+                           relative_path_to_demand='/GIS_Data/ET_Location_Data_WDS_ELEC_PNC.csv',
+                           relative_path_to_coors='/GIS_Data/ET_Coordinates.csv',
+                           relative_path_to_od_matrix='/GIS_Data/ET_ODs.csv', services=input_data_case.S) # important: stick to order in .csv!
 
-total_demand = sum([value for key,value in input_gis.get_total_demands().items() if key[1] == 'PNC'])
-print(total_demand)
+total_demand = sum([value for key,value in input_gis.get_total_demands().items() if key[1] == 'ELEC'])
+#print(total_demand)
 #
-scenario = Scenario(30, lower_bound=0, upper_bound=200, GIS_inputs=input_gis)
+scenario = Scenario(20, lower_bound=0, upper_bound=300, GIS_inputs=input_gis)
 relevant_customers = len(scenario.C) / len(input_gis.get_customers())
 #
 #
@@ -70,7 +70,7 @@ framework_input = fpvrps.FPVRPVecIndConfg(input_data_case.T, W_i = input_gis.get
                                           w_i= input_gis.get_daily_demands(), c =input_gis.get_od_to_dist(),
                                           coordinates=input_gis.get_coors(), S=input_data_case.S, H=input_data_case.H, travel_time=input_gis.get_od_to_time(),
                                           Q_h_s=input_data_case.Q_h_s, fixed_costs_h=input_data_case.fixed_costs, service_time=input_data_case.service_times)
-print(input_gis.get_od_to_time())
+
 #print(input_gis.get_total_demands())
 #
 io_excel = IOExcel(scenario, root_directory='04-08-CaseStudy', add_to_folder_title='', title_excel_to_create_or_read="DecisionvariableValues.xlsx",

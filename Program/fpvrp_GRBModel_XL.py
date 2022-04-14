@@ -51,7 +51,8 @@ def find_shortest_tour_for_d(k_d_to_routelinks):
             while len(route) < len(traversed_arcs_list):
                 route.append(next_arc)
                 if next_arc[0][1] == index_hub and len(route) < len(traversed_arcs_list):  # takes first element ("next arc") from returned list from get_successor and then takes second node in tuple as destination
-                    print(next_arc)
+                    #
+                   # print(next_arc)
                     # print("are in second part with this list here ", traversed_arcs_list)
                     return (k, t, traversed_arcs_list), '2'
                 next_arc = get_successor(next_arc, traversed_arcs_list)
@@ -70,7 +71,7 @@ def find_shortest_invalid_tours(k_d_to_routelinks):
     while next_route:
         validator = RouteValidation(next_route)
         is_valid = validator.get_status()
-        print("Check next route :", next_route, " is valid ? ", is_valid)
+      #  print("Check next route :", next_route, " is valid ? ", is_valid)
 
         if not is_valid:
             found_one_invalid = True
@@ -148,12 +149,12 @@ def funct_weight_to_range(load_weight_total, max_weight=1000, max_range=300, min
 
 
 
-class FPVRPSVehInd:
+class VRP_VBS_Optimizer:
 
-    def __init__(self, input_params, next_scenario):
-        self.cfg = input_params
+    def __init__(self, cfg_params, next_scenario):
+        self.cfg = cfg_params
         self.mp = Model('P_VRP')
-        self.S = input_params.S
+        self.S = cfg_params.S
 
         # scenario dependent data
         self.C = next_scenario.C
@@ -186,13 +187,13 @@ class FPVRPSVehInd:
         self.mp.addConstrs(self.q[i, k, t, s] <= self.cfg.w[i,s] * self.z[i, k, t] for i in self.C for k in self.K for t in self.cfg.T for s in self.S)
         print(" .. setting default constraint 4.3  ... ")
         # constraint 4.3: establish that total quantity delivered by k at t does not exceed vehicle capa
-        self.mp.addConstrs(quicksum(self.q[i, k, t, s] for i in self.C) <= quicksum(self.cfg.Q_h_s[h, s] * self.u[h,k]  for h in self.cfg.H) for k in self.K for t in self.cfg.T for s in self.S)
+        self.mp.addConstrs(quicksum(self.q[i, k, t, s] for i in self.C) <= quicksum(self.cfg.Q_h_s[h][s] * self.u[h,k]  for h in self.cfg.H) for k in self.K for t in self.cfg.T for s in self.S)
         print(" .. setting default constraint 4.3b  ... ") # only allow positiv quantity in case a vehicle is active on that day => we need Q hat!!
         self.mp.addConstrs(quicksum(self.q[i, k, t, s] for i in self.C) <= self.cfg.Q_bigM[s] * self.z[index_hub, k, t]  for k in self.K for t in self.cfg.T for s in self.S)
 
-        print(" .. setting default constraint 4.4  ... ")
+        #print(" .. setting default constraint 4.4  ... ")
         # constraint 4.4.: at each time period, at most 1 vehicle serves the demand of customer i
-        self.mp.addConstrs(quicksum(self.z[i, k, t] for k in self.K) <= 1 for i in self.C for t in self.cfg.T)
+        # self.mp.addConstrs(quicksum(self.z[i, k, t] for k in self.K) <= 1 for i in self.C for t in self.cfg.T)
         print(" .. setting default constraint 4.5  ... ")
         # constraint 4.5.: for every vehicle and time period, one arc has to exit from the nod of every visited node
         self.mp.addConstrs(quicksum(self.y[i, j, k, t] for j in self.N if (i,j) in self.A) == self.z[i, k, t]
@@ -217,7 +218,7 @@ class FPVRPSVehInd:
         print (" .. setting additional constraints ...")
         self.set_max_dist()
         self.set_time_limit()
-        self.set_max_num_stops()
+        #self.set_max_num_stops()
 
 
     def __set_valid_inequalities(self):
@@ -375,8 +376,9 @@ class FPVRPSVehInd:
             quicksum(self.y[i, j, k, t] * self.cfg.c[i, j] for (i, j) in self.A for t in self.cfg.T for k in self.K))
 
     def solve_model(self):
-        self.mp.Params.MIPGap = 0.05
-        self.mp.Params.TimeLimit = 259200
+        required_mip_gap = len(self.N) / 80
+        self.mp.Params.MIPGap = required_mip_gap
+        self.mp.Params.TimeLimit = 86000
         self.mp.Params.LazyConstraints = 1
         self.mp.Params.NonConvex = 2
         self.mp.optimize(callback)
@@ -384,14 +386,8 @@ class FPVRPSVehInd:
 
 
     def print_output(self):
-
-        for v in self.mp.getVars():
-            if v.x > 0:
-                print("Variable: " , v, " Value: " , v.X)
-
-        print("Optimal Value : " , self.mp.objVal)
-      #  print(" + + + ")
-      #  print("Captured nodes per tour : ", [i for item in self.mp._captured_tours for i in item] )
+        print("RUNTIME ", self.mp.Runtime, " OPTIMAL VALUE " , self.mp.objVal)
+        #print("Optimal Value : " , self.mp.objVal)
 
 class FPVRPVecIndPreProcess:
 
@@ -431,7 +427,7 @@ class FPVRPVecIndPreProcess:
 class FPVRPVecIndConfg:
 
     def __init__(self, T,  W_i, w_i, c, coordinates, S, H, travel_time, Q_h_s, fixed_costs_h, service_time,
-                 time_limit=8, stop_limit=5, range_limit=300):
+                 time_limit=8, stop_limit=3, range_limit=300):
 
         self.T = T
         self.W = W_i # total demand for entire planning horizon (nested dict)
@@ -451,7 +447,7 @@ class FPVRPVecIndConfg:
 
         self.H = H
         self.Q_h_s = Q_h_s
-        self.Q_bigM = dict((s, max(self.Q_h_s[h,s] for h in self.H)) for s in self.S)
+        self.Q_bigM = dict((s, max(self.Q_h_s[h][s] for h in self.H)) for s in self.S)
         self.f = fixed_costs_h
 
 

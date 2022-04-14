@@ -23,7 +23,7 @@ framework_input = fpvrps.FPVRPVecIndConfg(T, A=list(input_gis.get_od_to_dist().k
                                           w_i= input_gis.get_daily_max_demand_dict(), capa=vehicle_capa, c =input_gis.od_to_distance,
                                           coordinates=input_gis.coordinates, S=S)
 
-model = fpvrps.FPVRPSVehInd(framework_input, scenario)
+model = fpvrps.VRP_VBS_Optimizer(framework_input, scenario)
 model.set_constraints()
 model.set_objective()
 model.solve_model()

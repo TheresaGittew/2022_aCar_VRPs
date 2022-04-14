@@ -13,7 +13,7 @@ class RouteValidation():
         self.arc_li = arc_li
 
     def order_links(self):
-        print("arclist unordered : ", self.arc_li)
+       # print("arclist unordered : ", self.arc_li)
         arclist_ordered = []
         current_elem = self.arc_li[0]
         arclist_ordered.append(current_elem)
@@ -21,7 +21,7 @@ class RouteValidation():
             destination = current_elem[1]
             current_elem = [i for i in self.arc_li if i[0] == destination][0]  # next element: origin = current dest
             arclist_ordered.append(current_elem)
-        print("arclist ordered ", arclist_ordered)
+       # print("arclist ordered ", arclist_ordered)
         return arclist_ordered
 
 
@@ -176,7 +176,7 @@ class FPVRPPostProcessor():
 
                 # only takes the first two elements of each tuple element
                 arcs_for_vehicle_day = [(orig,dest) for orig, dest, veh, day in indices_o_d_vehicle_day]
-                print(arcs_for_vehicle_day)
+               # print(arcs_for_vehicle_day)
                 route_is_valid = RouteValidation(arcs_for_vehicle_day).get_status()
                 if not route_is_valid:
                     faulty_routes[k, d] = arcs_for_vehicle_day
@@ -196,7 +196,7 @@ class FPVRPPostProcessor():
         # #
         # use given distances and find faulty routes
         faulty_routes = self._find_and_set_faulty_routes(grb_results_dict_to_df_input_y.copy())
-        print("faulty routes: ", faulty_routes)
+       # print("faulty routes: ", faulty_routes)
 
         #
         self.additional_distance_after_adjust = 0
@@ -227,7 +227,7 @@ class FPVRPPostProcessor():
 
 
     def _enhance_routes_aux(self, arclist_current_route):
-        print("INPUT ROUTE TO BE IMPROVED" , arclist_current_route)
+       # print("INPUT ROUTE TO BE IMPROVED" , arclist_current_route)
 
         # #
         # preparations : map nodes in given route to new indices (0, .. , n) so the k-opt methods can be applied
@@ -253,7 +253,7 @@ class FPVRPPostProcessor():
         # mapping back to original node indices
         best_found_route_links = list(map(
             (lambda x: (node_id_new_to_old[x[0]], node_id_new_to_old[x[1]])), zip(best_found_route_single_nodes, best_found_route_single_nodes[1:])))
-        print("OUTPUT ", best_found_route_links)
+      # print("OUTPUT ", best_found_route_links)
         return best_found_route_links
 
     # gets dictionary with o-d distances and route_df as multiindex pd dataframe
@@ -295,7 +295,7 @@ class FPVRPPostProcessor():
                 ind_list = df_y_modified.index[ (df_y_modified['Vehicle'] == k) & (df_y_modified['Day'] == d)].tolist()
 
                 for i in list(ind_list):
-                    print(i)
+                   # print(i)
                     next_link = links_for_k_d_impr_it.__next__()
                     df_y_modified.loc[i] = [next_link[0], next_link[1], k, d, 1]
 
