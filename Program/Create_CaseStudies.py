@@ -4,12 +4,13 @@ import numpy as np
 from fpvrp_ParameterInputClasses import InputGISReader
 from Execute import execute_scenario
 import random
+import itertools
 
-slice= [37, 9, 30, 35, 27, 52, 41, 51, 45, 16, 13, 29, 40, 36, 4]
+#slice= [37, 9, 30, 35, 27, 52, 41, 51, 45, 16, 13, 29, 40, 36, 4]
 
 # enter number as run_type between 0 and 7 for specifying the specific case study (customer 'fragment')
 class CaseStudy_INPUT():
-    def __init__(self, run_type, case_study_type='ET', slice=None, root_directory= '04_14_CaseStudy', customer_fragment=((0, 40), (40, 60), (60, 70), (70, 80),
+    def __init__(self, run_type, case_study_type='ET', slice=None, root_directory= '04_19_CaseStudy', customer_fragment=((0, 20), (40, 60), (60, 70), (70, 80),
                                                                           (80, 85), (85, 90), (90, 95), (95, 100))):
         self.separate_runs = customer_fragment
         self.root_directory = root_directory+'_'+case_study_type+'_'+str(run_type)+'/'
@@ -35,6 +36,8 @@ class CaseStudy_INPUT():
         upper_bound_ringarea = customer_fragment[run_type][1] / 100
 
         # step 1: go through all service combinations
+        #
+
         while set_provided_services:
             input_interface = DummyForExcelInterface(set_provided_services).get_vehiclecapa_numdays_S()
             input_gis = InputGISReader(input_interface.daily_demand_factors[0],
@@ -50,17 +53,23 @@ class CaseStudy_INPUT():
                                                                                                    customer_groups_shuffled,
                                                                                                    len(input_gis.customers)) if not slice else create_customer_sets(distance_limits,
                                                                                                    customer_groups_shuffled, len(slice))
+
+            count_three = itertools.cycle([1, 2, 3, 4])
             for customer_scenario_id, customer_lis in customer_scen_id_to_customer_list.items():
+                # # only calculate every third scenario this time
+
                 percentage = customer_scen_id_to_coverage[customer_scenario_id]
                 if percentage > lower_bound_ringarea and percentage <= upper_bound_ringarea:
                     print("RUN + + Scenario services: ", set_provided_services, " | S-Points : ", customer_lis,
                           " % Points (from tot. Area) ",  percentage, " | Customer Id : ", customer_scenario_id)
-                    print("Used Capacities vehicle configs: ", input_interface.Q_h_s)
+
+                    next_count = next(count_three)
                     number_vehicles = len(customer_lis) * 30
-                    execute_scenario(relevant_customers=customer_lis, number_vehicles=number_vehicles,
-                                     input_interface=input_interface,
-                                     input_gis=input_gis, root_directory=self.root_directory,
-                                     customer_scenario=customer_scenario_id, services_scenario=set_provided_services)
+                    if next_count == 1:
+                        execute_scenario(relevant_customers=customer_lis, number_vehicles=number_vehicles,
+                                         input_interface=input_interface,
+                                         input_gis=input_gis, root_directory=self.root_directory,
+                                         customer_scenario=customer_scenario_id, services_scenario=set_provided_services, percentage=round(percentage,2))
 
             set_provided_services = next(self.service_combis, None)
 
@@ -132,7 +141,7 @@ def create_customer_sets(distance_limits, customer_groups_shuffled, total_numb_c
 # 8 parallel scenarios, each of them defined by lb and ub
 
 # Dran denken! Wenn slice gewählt, neues root directory angeben
-c = CaseStudy_INPUT(0)
+c = CaseStudy_INPUT(0, 'CI')
 
 
 

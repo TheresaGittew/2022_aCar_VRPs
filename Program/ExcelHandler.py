@@ -16,8 +16,6 @@ class IOExcel:
         self.root_directory = root_directory
         self.scenario = scenario
 
-
-
         # #
         # create new folder path name for current scenario
         self.path_to_scenario_folder_str = root_directory + '/scenario_' + str(scenario_id) + add_to_folder_title+'/'
@@ -50,7 +48,7 @@ class IOExcel:
         df = df[df['Value'] > 0.001]
         return df
 
-    def save_gurobi_res_in_excel(self, list_result_vars, model_objVal, model_runtime):
+    def save_gurobi_res_in_excel(self, list_result_vars, model_objVal, model_runtime, gap):
         print(self.titles_keys_per_dec_var)
 
         # #
@@ -64,9 +62,9 @@ class IOExcel:
 
         # #
         # Step 2: save results in Excel file
-        self.save_df_res_in_excel(dfs_output_dec_vars, model_objVal, model_runtime)
+        self.save_df_res_in_excel(dfs_output_dec_vars, model_objVal, model_runtime, gap)
 
-    def save_df_res_in_excel(self, dfs_output_dec_vars, objVal, model_runtime):
+    def save_df_res_in_excel(self, dfs_output_dec_vars, objVal, model_runtime, gap):
 
         # #
         #   Write the panda dataframes into excel file
@@ -77,7 +75,7 @@ class IOExcel:
 
         # #
         # Step 3: Write objective value + time to pd dataframe and save
-        pd.DataFrame([objVal, model_runtime]).to_excel(writer, 'objVal')
+        pd.DataFrame([objVal, model_runtime, gap]).to_excel(writer, 'objVal')
         writer.save()
 
     # If we create new results, save them to excel and read the results in the same run, the

@@ -16,7 +16,7 @@ def sub_optimize_scenario(scenario, cfg_params, io_excel):
     model.set_objective()
     model.solve_model()
     io_excel.save_gurobi_res_in_excel\
-            ([model.z, model.y, model.q, model.u], model.mp.objVal, model.mp.Runtime )
+            ([model.z, model.y, model.q, model.u], model.mp.objVal, model.mp.Runtime, model.mp.MIPGap)
 
 def sub_postprocess_grb_results(scenario, framework_input, io_excel_grb_results, io_excel_processed_results, input_gis):
     grb_results_in_pd_dfs = io_excel_grb_results.get_results_from_excel_to_df(with_multiindex=True)
@@ -40,7 +40,7 @@ def sub_postprocess_grb_results(scenario, framework_input, io_excel_grb_results,
 
     grb_results_unchanged = io_excel_grb_results.get_results_from_excel_to_df(with_multiindex=False)
     io_excel_processed_results.save_df_res_in_excel([grb_results_unchanged['Z'], df_y_enhanced_without_multiindex, grb_results_unchanged['Q'], grb_results_unchanged['U']],
-                                  new_total_costs, 0)
+                                  new_total_costs, 0, 0)
 
 
 def sub_vizualize_results(scenario, framework_input, io_excel, root_directory_savings):
@@ -55,7 +55,7 @@ def sub_vizualize_results(scenario, framework_input, io_excel, root_directory_sa
 # Funktion, die aktuelles Szenario nimmt und übergreifend die input parameter hin und her schiebt u. Unterfunktionen aufruft
 # u. letztlich Optimierung startet
 def execute_scenario(relevant_customers, number_vehicles, input_interface, input_gis, root_directory,
-                      services_scenario, customer_scenario, with_vizualization=True):
+                      services_scenario, customer_scenario, percentage, with_vizualization=True):
 
     scenario = Scenario(number_vehicles, GIS_inputs=input_gis, relevant_customers=relevant_customers)
 
@@ -70,7 +70,7 @@ def execute_scenario(relevant_customers, number_vehicles, input_interface, input
 
     # #
     # Anlegen Excel-Objekt als Handler der Ergebnisse (ohne Nachbearbeitung)
-    io_excel = IOExcel(scenario, root_directory=root_directory, scenario_id=''+str(services_scenario)+' '+str(customer_scenario), add_to_folder_title='',
+    io_excel = IOExcel(scenario, root_directory=root_directory, scenario_id=''+str(services_scenario)+' '+str(customer_scenario) +' '+str(percentage), add_to_folder_title='',
                        title_excel_to_create_or_read="DecisionvariableValues.xlsx",
                        titles_keys_per_dec_var=(['Customer', 'Vehicle', 'Day'], ['O', 'D', 'Vehicle', 'Day'],
                                                 ['Customer', 'Vehicle', 'Day', 'ServiceType'],
@@ -78,7 +78,9 @@ def execute_scenario(relevant_customers, number_vehicles, input_interface, input
 
     sub_optimize_scenario(scenario, cfg_params, io_excel)
 
-    io_excel_for_processed_data = IOExcel(scenario, root_directory=root_directory, scenario_id=''+str(services_scenario)+' '+str(customer_scenario),
+    io_excel_for_processed_data = IOExcel(scenario, root_directory=root_directory, scenario_id=''+str(services_scenario)
+                                                                                               +' '+str(customer_scenario)
+                                                                                               +' '+str(percentage),
                                        add_to_folder_title='', title_excel_to_create_or_read="DecisionvariableValues_PP.xlsx",
                                        titles_keys_per_dec_var=(
                                        ['Customer', 'Vehicle', 'Day'], ['O', 'D', 'Vehicle', 'Day'],
