@@ -10,7 +10,7 @@ import itertools
 
 # enter number as run_type between 0 and 7 for specifying the specific case study (customer 'fragment')
 class CaseStudy_INPUT():
-    def __init__(self, run_type, case_study_type='ET', slice=None, root_directory= '04_19_CaseStudy', customer_fragment=((0, 20), (40, 60), (60, 70), (70, 80),
+    def __init__(self, run_type, case_study_type='ET', slice=None, root_directory= '04_19_CaseStudy', customer_fragment=((0, 40), (40, 60), (60, 70), (70, 80),
                                                                           (80, 85), (85, 90), (90, 95), (95, 100))):
         self.separate_runs = customer_fragment
         self.root_directory = root_directory+'_'+case_study_type+'_'+str(run_type)+'/'
@@ -54,7 +54,7 @@ class CaseStudy_INPUT():
                                                                                                    len(input_gis.customers)) if not slice else create_customer_sets(distance_limits,
                                                                                                    customer_groups_shuffled, len(slice))
 
-            count_three = itertools.cycle([1, 2, 3, 4])
+            count_three = itertools.cycle([1, 2, 3])
             for customer_scenario_id, customer_lis in customer_scen_id_to_customer_list.items():
                 # # only calculate every third scenario this time
 
@@ -141,7 +141,14 @@ def create_customer_sets(distance_limits, customer_groups_shuffled, total_numb_c
 # 8 parallel scenarios, each of them defined by lb and ub
 
 # Dran denken! Wenn slice gewählt, neues root directory angeben
-c = CaseStudy_INPUT(0, 'CI')
+c = CaseStudy_INPUT(0)
+# c = CaseStudy_INPUT(1)
+# c = CaseStudy_INPUT(2)
+# c = CaseStudy_INPUT(3)
+# c = CaseStudy_INPUT(4)
+# c = CaseStudy_INPUT(5)
+# c = CaseStudy_INPUT(6)
+# c = CaseStudy_INPUT(7)
 
 
 
