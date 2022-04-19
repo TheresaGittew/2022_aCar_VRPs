@@ -17,11 +17,11 @@ class CaseStudy_INPUT():
         if slice:
             self.root_directory = root_directory+'_Slice_'+case_study_type+'_'+str(run_type)+'/'
         if case_study_type == 'ET':
-            self.service_combis = iter([['WDS'], ['PNC'], ['ELEC'], ['ED'], ['WDS', 'PNC'],
-                                   ['WDS', 'ELEC'], ['WDS', 'ED'], ['PNC', 'ELEC'],
-                                   ['PNC', 'ED'], ['ELEC', 'ED'], ['WDS', 'PNC', 'ELEC'],
-                                   ['WDS', 'PNC', 'ED'], ['WDS', 'ELEC', 'ED'], ['PNC', 'ELEC', 'ED'],
-                                   ['WDS', 'PNC', 'ELEC', 'ED']])
+            self.service_combis = iter([ ['PNC'], ['ELEC'], ['ED'],
+                                    ['PNC', 'ELEC'],
+                                   ['PNC', 'ED'], ['ELEC', 'ED'],
+                                  ['PNC', 'ELEC', 'ED'],
+                                   ])
             self.relative_path_to_demand = '/GIS_Data/ET_Location_Data.csv'
             self.relative_path_to_coors = '/GIS_Data/ET_Coordinates.csv'
             self.relative_path_to_od_matrix = '/GIS_Data/ET_ODs.csv'

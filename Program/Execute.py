@@ -91,7 +91,20 @@ def execute_scenario(relevant_customers, number_vehicles, input_interface, input
     sub_vizualize_results(scenario, cfg_params, io_excel_for_processed_data,
                           io_excel_for_processed_data.get_path_str_for_scenario())
 
+# services = [['WDS']]
+# input_interface = DummyForExcelInterface(services[0])
+# input_gis = InputGISReader(input_interface.daily_demand_factors[0],
+#                            input_interface.functions_to_consumption_per_T,
+#                            relative_path_to_demand='/GIS_Data/ET_Location_Data.csv',
+#                            relative_path_to_coors='/GIS_Data/ET_Coordinates.csv',
+#                            relative_path_to_od_matrix='/GIS_Data/ET_ODs.csv',
+#                            services=services[0])
+# customers = [7, 36, 52, 20, 35, 28, 24, 45, 55, 57, 10, 13, 48, 37, 14, 42, 29, 43, 2, 38, 33, 16]
+#vehicles = len(customers) * 30 * 1000 * 5
+#print(vehicles)
+#print("TOtal demand for water", sum(input_gis.get_total_demands()[i, 'WDS'] for i in customers))
 
+#execute_scenario(customers, 400, DummyForExcelInterface(services[0]), input_gis, '/Users/theresawettig/PycharmProjects/', ['WDS'], 21, 0.5 )
 #
 # input_data_case = DummyForExcelInterface_ET().get_vehiclecapa_numdays_S()  # infos über betrachtete services, kapazitäten, etc...
 # relevant_customers = [2, 543, 43, 43, 3]

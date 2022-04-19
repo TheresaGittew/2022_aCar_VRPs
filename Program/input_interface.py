@@ -95,7 +95,7 @@ class DummyForExcelInterface:
         self.H = list(self.Q_h_s.keys())
 
         self.fixed_costs = dict((h, 10000 + 2000 * len([i for i in self.Q_h_s[h].values() if i != 0.0])) for h in self.H)
-        self.service_times = {'WDS': 0.0041, 'PNC': 0.1666, 'ELEC': 0.000083, 'ED': 0.083}
+        self.service_times = {'WDS': 0.000001, 'PNC': 0.1666, 'ELEC': 0.000083, 'ED': 0.083}
 
         self.daily_demand_factors = {'WDS': 1, 'ELEC': 1, 'ED': 1, 'PNC': 1},
 
@@ -121,7 +121,7 @@ class DummyForExcelInterface:
                                                                   (y * pnc_births_per_women)/ pnc_fertility_span)}
         #self.max_num_vehicles = 25
         self.time_limit = 8
-        self.stop_limit = 3
+        self.stop_limit = 4
         self.range_limit = 200
 
 
