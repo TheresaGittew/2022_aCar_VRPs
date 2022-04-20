@@ -218,7 +218,7 @@ class VRP_VBS_Optimizer:
         print (" .. setting additional constraints ...")
         self.set_max_dist()
         self.set_time_limit()
-        #self.set_max_num_stops()
+        self.set_max_num_stops()
 
 
     def __set_valid_inequalities(self):
@@ -286,17 +286,18 @@ class VRP_VBS_Optimizer:
 
 
     def set_max_num_stops(self): # todo => max_stops in config class
+        print("set max num stops")
         self.mp.addConstrs(quicksum(self.z[i, k, t] for i in self.C ) <= 4 for k in self.K for t in self.cfg.T)
 
     def set_time_limit(self):
-        print("set time limit")
+        print("set time limit to" , str(self.cfg.time_limit))
         self.mp.addConstrs(quicksum(self.y[i, j, k, t] * self.cfg.travel_time[i,j] for i,j in self.A )
                            + quicksum(self.q[i, k, t, s] * self.cfg.service_time[s] for s in self.cfg.S for i in self.C)
 
                            <= self.cfg.time_limit for k in self.K for t in self.cfg.T)
 
     def set_max_dist(self):  # todo => times & limit in config class
-        print("set max dist")
+        print("set max dist", str(self.cfg.range_limit))
         self.mp.addConstrs(quicksum(self.y[i, j, k, t] * self.cfg.c[i, j] for i, j in self.A)
                            <= self.cfg.range_limit for k in self.K for t in self.cfg.T)
 
@@ -373,11 +374,10 @@ class VRP_VBS_Optimizer:
         # here, you can potentially add further cost factorsself
         self.mp.setObjective(
             quicksum(self.cfg.f[h] * self.u[h,k] for h in self.cfg.H for k in self.K) +
-            quicksum(self.y[i, j, k, t] * self.cfg.c[i, j] for (i, j) in self.A for t in self.cfg.T for k in self.K))
+            quicksum(self.y[i, j, k, t] * self.cfg.c[i, j] * 0.5 for (i, j) in self.A for t in self.cfg.T for k in self.K))
 
     def solve_model(self):
-        required_mip_gap = len(self.N) / 80
-        self.mp.Params.MIPGap = required_mip_gap
+        self.mp.Params.MIPGap = 0.6 if len(self.C) > 10 else 0.3
         self.mp.Params.TimeLimit = 86000
         self.mp.Params.LazyConstraints = 1
         self.mp.Params.NonConvex = 2

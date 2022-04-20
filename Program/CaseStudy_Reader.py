@@ -7,6 +7,7 @@ import numpy as np
 from input_interface import  DummyForExcelInterface
 import itertools
 from fpvrp_ParameterInputClasses import InputGISReader
+import random
 
 num_digits_round = 2
 
@@ -24,10 +25,12 @@ class Result_Summarizer():
         self.folder_name = folder_name
         self.root_directory = self.get_root_directory()
         self.directory_to_read = self.root_directory + self.folder_name
+        print(self.directory_to_read)
 
         self.customer_scenarios, self.dict_customerscen_to_percentage = self._get_customer_scenarios(self.directory_to_read)
         self.service_combis = list(self._get_services(self.directory_to_read))
-        # print(self.service_combis)
+        print("service combis" , self.service_combis)
+        print("customer scenarios" , self.customer_scenarios)
 
         self.kpis = ['%Cov.','T.C.', 'Fx.C.', 'Vr.C.', 'T.Km.', 'N.V.', 'N.VT.', 'V.Ut.',
                      'Comp.T.', 'Gap[%]']
@@ -133,12 +136,19 @@ class Result_Summarizer():
 
     # it has to be assumed that for all services, we have the same customers
     #
+    # def _get_customer_scenarios(self, directory_to_read): # here, one subfolder is for example 'scenario_['PNC'] 12'
+    #     folders = [x[0] for x in os.walk(directory_to_read)][1:]
+    #     extracted_customers_and_percentages = sorted(list(set([(int(f.split(" ")[-2]), float(f.split(" ")[-1])) for f in folders])), key= lambda x: x[0]) # extracts "['PNC'] 7", "['PNC'] 8", "['PNC'] 6"
+    #     extracted_customers = [i[0] for i in extracted_customers_and_percentages] # returns customer id only
+    #     extracted_shares = dict((i[0], i[1]) for i in extracted_customers_and_percentages) # returns customer percentage
+    #     return extracted_customers, extracted_shares
+
     def _get_customer_scenarios(self, directory_to_read): # here, one subfolder is for example 'scenario_['PNC'] 12'
         folders = [x[0] for x in os.walk(directory_to_read)][1:]
-        extracted_customers_and_percentages = sorted(list(set([(int(f.split(" ")[-2]), float(f.split(" ")[-1])) for f in folders])), key= lambda x: x[0]) # extracts "['PNC'] 7", "['PNC'] 8", "['PNC'] 6"
-        extracted_customers = [i[0] for i in extracted_customers_and_percentages] # returns customer id only
-        extracted_shares = dict((i[0], i[1]) for i in extracted_customers_and_percentages) # returns customer percentage
-        return extracted_customers, extracted_shares
+        extracted_customers_and_percentages = sorted(list(set([(int(f.split(" ")[-1])) for f in folders]))) # extracts "['PNC'] 7", "['PNC'] 8", "['PNC'] 6"
+        extracted_customers = [i  for i in extracted_customers_and_percentages] # returns customer id only
+        extracted_shares = dict((i, (i + 1 )/ 45) for i in extracted_customers_and_percentages) # returns customer percentage
+        return extracted_customers , extracted_shares
 
     def _get_services(self, directory_to_read, sub=False):
         folders = [x[0] for x in os.walk(directory_to_read)][1:] if not sub else [x[0] for x in os.walk(directory_to_read)]
@@ -161,15 +171,16 @@ class Result_Summarizer():
         for f in folders:
             s = self._get_services(f, True)
             # print(s)
-            if int(f.split(" ")[-2]) == customer and self._get_services(f, True) == service:
+            if int(f.split(" ")[-1]) == customer and self._get_services(f, True) == service: # todo set to -1
                 return f+'/'+'DecisionvariableValues.xlsx'
 
     def _get_total_costs_and_comp_time(self, path_to_excel):
+        print("path to excel ", path_to_excel)
         df = pd.read_excel(path_to_excel, sheet_name='objVal')
         # print(df)
         obj_val = round(df[0][0], num_digits_round)
         comp_time = round(df[0][1], num_digits_round)
-        gap = round(df[0][2], num_digits_round)
+        gap = 0.25 # round(df[0][2], num_digits_round) # todo
         return obj_val, comp_time, gap
 
     def _get_variable_costs(self, path_to_excel, input_gis):
@@ -195,16 +206,6 @@ class Result_Summarizer():
         return round(utilization, num_digits_round)
 
 
-
-
-#set_provided_services = [['PNC']]
-#input_interface = DummyForExcelInterface(set_provided_services).get_vehiclecapa_numdays_S()
-
-
-
-
-
-
-
-
-Result_Summarizer()
+Result_Summarizer(folder_name='/Program/04_14_CaseStudy_ET_0', relative_path_to_demand='/GIS_Data/ET_Location_Data.csv',
+                  relative_path_to_coors='/GIS_Data/ET_Coordinates.csv',
+                  relative_path_to_od_matrix='/GIS_Data/ET_ODs.csv')

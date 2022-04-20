@@ -10,68 +10,65 @@ import itertools
 
 # enter number as run_type between 0 and 7 for specifying the specific case study (customer 'fragment')
 class CaseStudy_INPUT():
-    def __init__(self, run_type, case_study_type='ET', slice=None, root_directory= '04_19_CaseStudy', customer_fragment=((0, 40), (40, 60), (60, 70), (70, 80),
-                                                                          (80, 85), (85, 90), (90, 95), (95, 100))):
+    def __init__(self, analyzed_service_combi_id, zone_id=0, case_study_type='ET', slice=None, root_directory='04_19_CaseStudy', customer_fragment=((22, 40), (40, 60), (60, 70), (70, 80),
+                                                                                                                                                    (80, 85), (85, 90), (90, 95), (95, 100))):
         self.separate_runs = customer_fragment
-        self.root_directory = root_directory+'_'+case_study_type+'_'+str(run_type)+'/'
+        self.root_directory = root_directory +'_' + case_study_type +'_' + str(zone_id) + '/'
         if slice:
-            self.root_directory = root_directory+'_Slice_'+case_study_type+'_'+str(run_type)+'/'
+            self.root_directory = root_directory +'_Slice_' + case_study_type +'_' + str(zone_id) + '/'
         if case_study_type == 'ET':
-            self.service_combis = iter([ ['PNC'], ['ELEC'], ['ED'],
-                                    ['PNC', 'ELEC'],
+            self.service_combis = [ ['PNC', 'ELEC'],
                                    ['PNC', 'ED'], ['ELEC', 'ED'],
-                                  ['PNC', 'ELEC', 'ED'],
-                                   ])
+                                  ['PNC', 'ELEC', 'ED'], ['WDS','PNC'], ['WDS','ELEC'],
+                                   ['WDS', 'ED'], ['WDS', 'PNC','ELEC'], ['WDS', 'PNC', 'ED'],
+                                   ['WDS','ELEC','ED'], ['WDS','PNC','ELEC','ED'], ['PNC'], ['ELEC'], ['ED'],]
             self.relative_path_to_demand = '/GIS_Data/ET_Location_Data.csv'
             self.relative_path_to_coors = '/GIS_Data/ET_Coordinates.csv'
             self.relative_path_to_od_matrix = '/GIS_Data/ET_ODs.csv'
         else:
-            self.service_combis = iter([['PNC'], ['ELEC'], ['PNC', 'ELEC']])
+            self.service_combis = [['PNC', 'ELEC']]
             self.relative_path_to_demand = '/GIS_Data/IC_Location_Data.csv'
             self.relative_path_to_coors = '/GIS_Data/IC_Coordinates.csv'
             self.relative_path_to_od_matrix = '/GIS_Data/IC_ODs.csv'
 
-        set_provided_services = next(self.service_combis, None)  # next_service_scen ist z.B. ['PNC','ED']
-        lower_bound_ringarea = customer_fragment[run_type][0] / 100
-        upper_bound_ringarea = customer_fragment[run_type][1] / 100
+        set_provided_services = self.service_combis[analyzed_service_combi_id]
+        lower_bound_ringarea = customer_fragment[zone_id][0] / 100
+        upper_bound_ringarea = customer_fragment[zone_id][1] / 100
 
         # step 1: go through all service combinations
         #
+        input_interface = DummyForExcelInterface(set_provided_services).get_vehiclecapa_numdays_S()
+        input_gis = InputGISReader(input_interface.daily_demand_factors[0],
+                                   input_interface.functions_to_consumption_per_T,
+                                   relative_path_to_demand=self.relative_path_to_demand,
+                                   relative_path_to_coors=self.relative_path_to_coors,
+                                   relative_path_to_od_matrix=self.relative_path_to_od_matrix,
+                                   services=set_provided_services)
 
-        while set_provided_services:
-            input_interface = DummyForExcelInterface(set_provided_services).get_vehiclecapa_numdays_S()
-            input_gis = InputGISReader(input_interface.daily_demand_factors[0],
-                                       input_interface.functions_to_consumption_per_T,
-                                       relative_path_to_demand=self.relative_path_to_demand,
-                                       relative_path_to_coors=self.relative_path_to_coors,
-                                       relative_path_to_od_matrix=self.relative_path_to_od_matrix,
-                                       services=set_provided_services)
+        # 2. Customer Scenarios
+        distance_limits, customer_groups_shuffled = generate_relevant_customers(input_gis) if not slice else generate_relevant_customers(input_gis, slice)
+        customer_scen_id_to_customer_list, customer_scen_id_to_coverage = create_customer_sets(distance_limits,
+                                                                                               customer_groups_shuffled,
+                                                                                               len(input_gis.customers)) if not slice else create_customer_sets(distance_limits,
+                                                                                               customer_groups_shuffled, len(slice))
 
-            # 2. Customer Scenarios
-            distance_limits, customer_groups_shuffled = generate_relevant_customers(input_gis) if not slice else generate_relevant_customers(input_gis, slice)
-            customer_scen_id_to_customer_list, customer_scen_id_to_coverage = create_customer_sets(distance_limits,
-                                                                                                   customer_groups_shuffled,
-                                                                                                   len(input_gis.customers)) if not slice else create_customer_sets(distance_limits,
-                                                                                                   customer_groups_shuffled, len(slice))
+        count_three = itertools.cycle([1, 2, 3])
+        for customer_scenario_id, customer_lis in customer_scen_id_to_customer_list.items():
+            # # only calculate every third scenario this time
 
-            count_three = itertools.cycle([1, 2, 3])
-            for customer_scenario_id, customer_lis in customer_scen_id_to_customer_list.items():
-                # # only calculate every third scenario this time
+            percentage = customer_scen_id_to_coverage[customer_scenario_id]
+            if percentage > lower_bound_ringarea and percentage <= upper_bound_ringarea:
+                print("RUN + + Scenario services: ", set_provided_services, " | S-Points : ", customer_lis,
+                      " % Points (from tot. Area) ",  percentage, " | Customer Id : ", customer_scenario_id)
 
-                percentage = customer_scen_id_to_coverage[customer_scenario_id]
-                if percentage > lower_bound_ringarea and percentage <= upper_bound_ringarea:
-                    print("RUN + + Scenario services: ", set_provided_services, " | S-Points : ", customer_lis,
-                          " % Points (from tot. Area) ",  percentage, " | Customer Id : ", customer_scenario_id)
+                next_count = next(count_three)
+                number_vehicles = len(customer_lis) * 30
+                if next_count == 1:
+                    execute_scenario(relevant_customers=customer_lis, number_vehicles=number_vehicles,
+                                     input_interface=input_interface,
+                                     input_gis=input_gis, root_directory=self.root_directory,
+                                     customer_scenario=customer_scenario_id, services_scenario=set_provided_services, percentage=round(percentage,2))
 
-                    next_count = next(count_three)
-                    number_vehicles = len(customer_lis) * 30
-                    if next_count == 1:
-                        execute_scenario(relevant_customers=customer_lis, number_vehicles=number_vehicles,
-                                         input_interface=input_interface,
-                                         input_gis=input_gis, root_directory=self.root_directory,
-                                         customer_scenario=customer_scenario_id, services_scenario=set_provided_services, percentage=round(percentage,2))
-
-            set_provided_services = next(self.service_combis, None)
 
 
 
