@@ -10,7 +10,7 @@ import itertools
 
 # enter number as run_type between 0 and 7 for specifying the specific case study (customer 'fragment')
 class CaseStudy_INPUT():
-    def __init__(self, analyzed_service_combi_id, zone_id=0, case_study_type='ET', slice=None, root_directory='04_19_CaseStudy', customer_fragment=((22, 40), (40, 60), (60, 70), (70, 80),
+    def __init__(self, analyzed_service_combi_id, zone_id=0, case_study_type='ET', slice=None, root_directory='04_20_CaseStudy', customer_fragment=((22, 40), (40, 60), (60, 70), (70, 80),
                                                                                                                                                     (80, 85), (85, 90), (90, 95), (95, 100))):
         self.separate_runs = customer_fragment
         self.root_directory = root_directory +'_' + case_study_type +'_' + str(zone_id) + '/'
