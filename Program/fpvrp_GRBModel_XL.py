@@ -114,7 +114,7 @@ def callback(model, where):
         if not shortest_invalid_tours_list == 'Routes i.O.':
             # print ("shortest invalid tour list" , shortest_invalid_tours_list)
             for next_invalid_tour in shortest_invalid_tours_list:
-                #print("Next faulty route: ", next_invalid_tour)
+                print("Next faulty route: ", next_invalid_tour)
                 #print("* * * mycallback has been called. One faulty route has been found. Finish * * *")
 
                 nodes_on_faulty_route = tuple(sorted(list(set([l for sublist in [[i,j] for i,j in next_invalid_tour] for l in sublist]))))
