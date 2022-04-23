@@ -50,16 +50,18 @@ class Result_Summarizer():
         return input_gis
 
     def _get_interface(self, single_service_combi):
-        return DummyForExcelInterface(single_service_combi).get_vehiclecapa_numdays_S()
+        print("current service combi ", single_service_combi)
+        print(DummyForExcelInterface(single_service_combi).Q_h_s)
+        return DummyForExcelInterface(single_service_combi)
 
 
 
 
     def _map_services_list(self, service_combis_in_list): # for example [['WDS','PNC'],['WDS']]
-        return [' ,'.join(lis) for lis in service_combis_in_list]
+        return [', '.join(lis) for lis in service_combis_in_list]
 
     def _map_single_service_list(self, service_combis_in_list): # for example ['WDS','PNC']
-        return ' ,'.join(service_combis_in_list)
+        return ', '.join(service_combis_in_list)
 
     def _setup_pandas_summary(self, customer_scenarios, service_combis, kpis):
         service_combis_mapped = self._map_services_list(service_combis)
@@ -69,6 +71,7 @@ class Result_Summarizer():
                                           index=self.pd_index, columns=customer_scenarios)
         print(self.pd_df_summary)
         ## Add total costs
+        print("Customer scnearois ", customer_scenarios)
         for c in customer_scenarios:
             print("Next customer scenario : ", c)
 
@@ -86,6 +89,7 @@ class Result_Summarizer():
 
                 # #
                 # add objective value - total costs - and computation time
+                print("here !! excel path: ", excel_path)
                 obj_val, comp_time, gap = self._get_total_costs_and_comp_time(excel_path)
                 self.pd_df_summary[c][s_to_string, 'T.C.'] = obj_val
                 self.pd_df_summary[c][s_to_string, 'Comp.T.'] = comp_time
@@ -111,9 +115,8 @@ class Result_Summarizer():
                 self.pd_df_summary[c][s_to_string, 'V.Ut.'] = self._get_utilization(excel_path, num_vecs )
 
         pd.set_option("display.max_rows", None, "display.max_columns", None)
-
         path_to_case_study_output_excel = self.root_directory + self.path_to_output + '/' + self.folder_name.split('/')[-1]+'.xlsx'
-        print(path_to_case_study_output_excel)
+        # print(path_to_case_study_output_excel)
         writer = pd.ExcelWriter(path_to_case_study_output_excel, engine='xlsxwriter')
         self.pd_df_summary.to_excel(writer, engine='xlsxwriter')
         writer.save()
@@ -136,19 +139,25 @@ class Result_Summarizer():
 
     # it has to be assumed that for all services, we have the same customers
     #
+    def _get_customer_scenarios(self, directory_to_read): # here, one subfolder is for example 'scenario_['PNC'] 12'
+
+
+        folders = [x[0] for x in os.walk(directory_to_read)][1:]
+        print(folders)
+        extracted_customers_and_percentages = sorted(list(set([(int(f.split(" ")[-2]), float(f.split(" ")[-1])) for f in folders])), key= lambda x: x[0]) # extracts "['PNC'] 7", "['PNC'] 8", "['PNC'] 6"
+
+        extracted_customers = [i[0] for i in extracted_customers_and_percentages] # returns customer id only
+        #print(extracted_customers_and_percentages)
+
+        extracted_shares = dict((i[0], i[1]) for i in extracted_customers_and_percentages) # returns customer percentage
+        return extracted_customers, extracted_shares
+
     # def _get_customer_scenarios(self, directory_to_read): # here, one subfolder is for example 'scenario_['PNC'] 12'
     #     folders = [x[0] for x in os.walk(directory_to_read)][1:]
-    #     extracted_customers_and_percentages = sorted(list(set([(int(f.split(" ")[-2]), float(f.split(" ")[-1])) for f in folders])), key= lambda x: x[0]) # extracts "['PNC'] 7", "['PNC'] 8", "['PNC'] 6"
-    #     extracted_customers = [i[0] for i in extracted_customers_and_percentages] # returns customer id only
-    #     extracted_shares = dict((i[0], i[1]) for i in extracted_customers_and_percentages) # returns customer percentage
-    #     return extracted_customers, extracted_shares
-
-    def _get_customer_scenarios(self, directory_to_read): # here, one subfolder is for example 'scenario_['PNC'] 12'
-        folders = [x[0] for x in os.walk(directory_to_read)][1:]
-        extracted_customers_and_percentages = sorted(list(set([(int(f.split(" ")[-1])) for f in folders]))) # extracts "['PNC'] 7", "['PNC'] 8", "['PNC'] 6"
-        extracted_customers = [i  for i in extracted_customers_and_percentages] # returns customer id only
-        extracted_shares = dict((i, (i + 1 )/ 45) for i in extracted_customers_and_percentages) # returns customer percentage
-        return extracted_customers , extracted_shares
+    #     extracted_customers_and_percentages = sorted(list(set([(int(f.split(" ")[-1])) for f in folders]))) # extracts "['PNC'] 7", "['PNC'] 8", "['PNC'] 6"
+    #     extracted_customers = [i  for i in extracted_customers_and_percentages] # returns customer id only
+    #     extracted_shares = dict((i, (i + 1 )/ 45) for i in extracted_customers_and_percentages) # returns customer percentage
+    #     return extracted_customers , extracted_shares
 
     def _get_services(self, directory_to_read, sub=False):
         folders = [x[0] for x in os.walk(directory_to_read)][1:] if not sub else [x[0] for x in os.walk(directory_to_read)]
@@ -156,7 +165,10 @@ class Result_Summarizer():
         folders = [f.replace("]", "*") for f in folders]
         extract_scenarios = set([(f.split('*')[-2]) for f in folders])
         extracted_scenarios = [list(map(lambda x: x.replace("'",''),d)) for d in [e.split(',') for e in extract_scenarios]]
-        return extracted_scenarios if not sub else extracted_scenarios[0]
+        extracted_scenarios_without_empty_space = [[d.replace(" ","") for d in combi] for combi in extracted_scenarios]
+        #print(extracted_scenarios_without_empty_space)
+
+        return extracted_scenarios_without_empty_space if not sub else extracted_scenarios_without_empty_space[0]
 
     def get_root_directory(self):
         root_directory_program = os.path.dirname(
@@ -166,21 +178,23 @@ class Result_Summarizer():
 
     # customer comes as tuple (0, 0.234) remember
     def _get_correct_excel(self, customer, service):
-        # print(service)
+        #print('customer: ', customer)
+        ##print(service)
         folders = [x[0] for x in os.walk(self.directory_to_read)][1:]
         for f in folders:
             s = self._get_services(f, True)
-            # print(s)
-            if int(f.split(" ")[-1]) == customer and self._get_services(f, True) == service: # todo set to -1
+            #print("service ", service)
+            #print(s)
+            if int(f.split(" ")[-2]) == customer and self._get_services(f, True) == service:
                 return f+'/'+'DecisionvariableValues.xlsx'
 
     def _get_total_costs_and_comp_time(self, path_to_excel):
-        print("path to excel ", path_to_excel)
+        #print("path to excel ", path_to_excel)
         df = pd.read_excel(path_to_excel, sheet_name='objVal')
         # print(df)
         obj_val = round(df[0][0], num_digits_round)
         comp_time = round(df[0][1], num_digits_round)
-        gap = 0.25 # round(df[0][2], num_digits_round) # todo
+        gap = round(df[0][2], num_digits_round)
         return obj_val, comp_time, gap
 
     def _get_variable_costs(self, path_to_excel, input_gis):
@@ -193,6 +207,7 @@ class Result_Summarizer():
 
     def _get_fixed_costs(self, path_to_excel, interface):
         pd_df = pd.read_excel(path_to_excel, sheet_name='U')['ConfigType']
+        print("fixed costs" , interface.fixed_costs)
         fixed_costs = sum(interface.fixed_costs[i] for i in list(pd_df))
         return round(fixed_costs, num_digits_round)
 
@@ -206,6 +221,6 @@ class Result_Summarizer():
         return round(utilization, num_digits_round)
 
 
-Result_Summarizer(folder_name='/Program/04_14_CaseStudy_ET_0', relative_path_to_demand='/GIS_Data/ET_Location_Data.csv',
-                  relative_path_to_coors='/GIS_Data/ET_Coordinates.csv',
-                  relative_path_to_od_matrix='/GIS_Data/ET_ODs.csv')
+Result_Summarizer(folder_name='/Program/04_22_CaseStudy_CI_0', relative_path_to_demand='/GIS_Data/IC_Location_Data.csv',
+                  relative_path_to_coors='/GIS_Data/IC_Coordinates.csv',
+                  relative_path_to_od_matrix='/GIS_Data/IC_ODs.csv')

@@ -9,7 +9,7 @@ class ReaderCapaOptions:
             os.path.abspath("README.md"))  # for example: /Users/theresawettig/PycharmProjects/2022_aCar_VRPs/Program
         self.root_directory_project = os.path.dirname(root_directory_program)
 
-    def __init__(self, services, path_to_capas='/GIS_Data/CaseStudy_CapacityOpt.csv'):
+    def __init__(self, services, path_to_capas='/GIS_Data/CaseStudy_Plan.csv'):
         self.path_to_capas = path_to_capas
         self._get_root_directory()
         self.services = services
@@ -28,7 +28,7 @@ class ReaderCapaOptions:
 
     # output should be: xyz
     def _prep_configs(self, df):
-        df['ELEC'] = df['ELEC'].apply(lambda x: round(float((x).replace(',','.')), 2))
+#        df['ELEC'] = df['ELEC'].apply(lambda x: round(float((x).replace(',','.')), 2))
         df = df.set_index('Unnamed: 0')
         return df
 
@@ -115,7 +115,7 @@ class DummyForExcelInterface:
         # These functions are used to map the number of potential customers to the weekly demand values
         self.functions_to_consumption_per_T = {'WDS': (lambda x: x * daily_water_consumption_p_P * self.num_days),
                                                'ELEC': (lambda x: (x * self.num_days / handy_battery_duration_in_days)
-                                                                  / elec_people_per_pack),
+                                                                ),
                                           'ED': (lambda x: x * ed_services_per_week),
                                                'PNC': (lambda y:  required_visits_per_week *
                                                                   (y * pnc_births_per_women)/ pnc_fertility_span)}
@@ -123,6 +123,7 @@ class DummyForExcelInterface:
         self.time_limit = 8
         self.stop_limit = 4
         self.range_limit = 200
+
 
 
     def get_vehiclecapa_numdays_S(self):
@@ -149,3 +150,5 @@ class DummyForExcelInterface:
 #
 #     def get_vehiclecapa_numdays_S(self):
 #         return self
+
+print(DummyForExcelInterface(['ELEC']).Q_h_s)

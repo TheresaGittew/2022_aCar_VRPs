@@ -10,7 +10,7 @@ import itertools
 
 # enter number as run_type between 0 and 7 for specifying the specific case study (customer 'fragment')
 class CaseStudy_INPUT():
-    def __init__(self, analyzed_service_combi_id, zone_id=0, case_study_type='ET', slice=None, root_directory='04_20_CaseStudy', customer_fragment=((0, 40), (40, 60), (60, 70), (70, 80),
+    def __init__(self, analyzed_service_combi_id, zone_id=0, case_study_type='ET', slice=None, root_directory='04_23_CaseStudy', customer_fragment=((40, 70), (70, 100), (60, 70), (70, 80),
                                                                                                                                                     (80, 85), (85, 90), (90, 95), (95, 100))):
         self.separate_runs = customer_fragment
         self.root_directory = root_directory +'_' + case_study_type +'_' + str(zone_id) + '/'
@@ -26,7 +26,7 @@ class CaseStudy_INPUT():
             self.relative_path_to_coors = '/GIS_Data/ET_Coordinates.csv'
             self.relative_path_to_od_matrix = '/GIS_Data/ET_ODs.csv'
         else:
-            self.service_combis = [['PNC', 'ELEC']]
+            self.service_combis = [['PNC'],['ELEC'],['PNC','ELEC']]
             self.relative_path_to_demand = '/GIS_Data/IC_Location_Data.csv'
             self.relative_path_to_coors = '/GIS_Data/IC_Coordinates.csv'
             self.relative_path_to_od_matrix = '/GIS_Data/IC_ODs.csv'
@@ -45,6 +45,7 @@ class CaseStudy_INPUT():
                                    relative_path_to_od_matrix=self.relative_path_to_od_matrix,
                                    services=set_provided_services)
 
+
         # 2. Customer Scenarios
         distance_limits, customer_groups_shuffled = generate_relevant_customers(input_gis) if not slice else generate_relevant_customers(input_gis, slice)
         customer_scen_id_to_customer_list, customer_scen_id_to_coverage = create_customer_sets(distance_limits,
@@ -60,9 +61,12 @@ class CaseStudy_INPUT():
             if percentage > lower_bound_ringarea and percentage <= upper_bound_ringarea:
                 print("RUN + + Scenario services: ", set_provided_services, " | S-Points : ", customer_lis,
                       " % Points (from tot. Area) ",  percentage, " | Customer Id : ", customer_scenario_id)
+               # print("total demand ELEC ", sum(input_gis.get_total_demands()[i, 'ELEC'] for i in customer_lis))
+               # print("Capacities: ", input_interface.Q_h_s)
+
 
                 next_count = next(count_three)
-                number_vehicles = len(customer_lis) * 30
+                number_vehicles = int(np.ceil(len(customer_lis) / 3))
                 if next_count == 1:
                     execute_scenario(relevant_customers=customer_lis, number_vehicles=number_vehicles,
                                      input_interface=input_interface,
@@ -138,7 +142,7 @@ def create_customer_sets(distance_limits, customer_groups_shuffled, total_numb_c
 # 8 parallel scenarios, each of them defined by lb and ub
 
 # Dran denken! Wenn slice gewählt, neues root directory angeben
-c = CaseStudy_INPUT(0)
+c = CaseStudy_INPUT(0, 0, 'CI')
 # c = CaseStudy_INPUT(1)
 # c = CaseStudy_INPUT(2)
 # c = CaseStudy_INPUT(3)
