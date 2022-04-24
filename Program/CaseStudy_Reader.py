@@ -89,7 +89,7 @@ class Result_Summarizer():
 
                 # #
                 # add objective value - total costs - and computation time
-                print("here !! excel path: ", excel_path)
+                print("here !! excel path: ", excel_path, "service: ", s, " cleint: ", c)
                 obj_val, comp_time, gap = self._get_total_costs_and_comp_time(excel_path)
                 self.pd_df_summary[c][s_to_string, 'T.C.'] = obj_val
                 self.pd_df_summary[c][s_to_string, 'Comp.T.'] = comp_time
@@ -189,6 +189,7 @@ class Result_Summarizer():
                 return f+'/'+'DecisionvariableValues.xlsx'
 
     def _get_total_costs_and_comp_time(self, path_to_excel):
+
         #print("path to excel ", path_to_excel)
         df = pd.read_excel(path_to_excel, sheet_name='objVal')
         # print(df)
@@ -221,6 +222,6 @@ class Result_Summarizer():
         return round(utilization, num_digits_round)
 
 
-Result_Summarizer(folder_name='/Program/04_22_CaseStudy_CI_0', relative_path_to_demand='/GIS_Data/IC_Location_Data.csv',
-                  relative_path_to_coors='/GIS_Data/IC_Coordinates.csv',
-                  relative_path_to_od_matrix='/GIS_Data/IC_ODs.csv')
+Result_Summarizer(folder_name='/Program/04_23_CaseStudy_ET', relative_path_to_demand='/GIS_Data/ET_Location_Data.csv',
+                  relative_path_to_coors='/GIS_Data/ET_Coordinates.csv',
+                  relative_path_to_od_matrix='/GIS_Data/ET_ODs.csv')

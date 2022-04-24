@@ -10,28 +10,39 @@ import itertools
 
 # enter number as run_type between 0 and 7 for specifying the specific case study (customer 'fragment')
 class CaseStudy_INPUT():
-    def __init__(self, analyzed_service_combi_id, zone_id=0, case_study_type='ET', slice=None, root_directory='04_23_CaseStudy', customer_fragment=((40, 70), (70, 100), (60, 70), (70, 80),
-                                                                                                                                                    (80, 85), (85, 90), (90, 95), (95, 100))):
+
+    def _get_num_vec_ub(self, service_combi, input_gis, customer_list, input_interface):
+        Q_s_max= {'PNC':40, 'WDS':1000, 'ELEC': 5406, 'ED':4000}
+        num_vehicles_required = 0
+        for s in service_combi:
+            max_needed_vecs_for_s = sum([input_gis.get_total_demands()[i, s] for i in customer_list]) # berechne Gesamtnachfrage für aktuellen Service
+            max_needed_vecs_for_s = max_needed_vecs_for_s / len(input_interface.T) # todo -> eig nicht ganz korrekt, da andere Constraints dies verhindern könnten, z.B. max_rnage
+            max_needed_vecs_for_s = int(np.floor( max_needed_vecs_for_s / Q_s_max[s]) + 2)
+            num_vehicles_required += max_needed_vecs_for_s
+        return num_vehicles_required
+
+
+
+    def __init__(self, service_combi, zone_id=0, case_study_type='ET', slice=None, root_directory='04_24_CaseStudy', customer_fragment=((0, 60), (60, 90), (90,100))):
         self.separate_runs = customer_fragment
         self.root_directory = root_directory +'_' + case_study_type +'_' + str(zone_id) + '/'
         if slice:
             self.root_directory = root_directory +'_Slice_' + case_study_type +'_' + str(zone_id) + '/'
         if case_study_type == 'ET':
-            self.service_combis = [ ['PNC', 'ELEC'],
-                                   ['PNC', 'ED'], ['ELEC', 'ED'],
-                                  ['PNC', 'ELEC', 'ED'], ['WDS','PNC'], ['WDS','ELEC'],
-                                   ['WDS', 'ED'], ['WDS', 'PNC','ELEC'], ['WDS', 'PNC', 'ED'],
-                                   ['WDS','ELEC','ED'], ['WDS','PNC','ELEC','ED'], ['PNC'], ['ELEC'], ['ED'],]
+            self.service_combis = [service_combi] # [ ['PNC', 'ELEC'],
+                                  # ['PNC', 'ED'], ['ELEC', 'ED'],
+                                 # ['PNC', 'ELEC', 'ED'], ['WDS','PNC'], ['WDS','ELEC'],
+                                 #  ['WDS', 'ED'], ['WDS', 'PNC','ELEC'], ['WDS', 'PNC', 'ED'],
+                                 #  ['WDS','ELEC','ED'], ['WDS','PNC','ELEC','ED'], ['PNC'], ['ELEC'], ['ED'],]
             self.relative_path_to_demand = '/GIS_Data/ET_Location_Data.csv'
             self.relative_path_to_coors = '/GIS_Data/ET_Coordinates.csv'
             self.relative_path_to_od_matrix = '/GIS_Data/ET_ODs.csv'
         else:
-            self.service_combis = [['PNC'],['ELEC'],['PNC','ELEC']]
             self.relative_path_to_demand = '/GIS_Data/IC_Location_Data.csv'
             self.relative_path_to_coors = '/GIS_Data/IC_Coordinates.csv'
             self.relative_path_to_od_matrix = '/GIS_Data/IC_ODs.csv'
 
-        set_provided_services = self.service_combis[analyzed_service_combi_id]
+        set_provided_services = service_combi
         lower_bound_ringarea = customer_fragment[zone_id][0] / 100
         upper_bound_ringarea = customer_fragment[zone_id][1] / 100
 
@@ -66,7 +77,8 @@ class CaseStudy_INPUT():
 
 
                 next_count = next(count_three)
-                number_vehicles = int(np.ceil(len(customer_lis) / 3))
+                number_vehicles = self._get_num_vec_ub(service_combi, input_gis, customer_lis, input_interface)
+                print("UB vehicles: ", number_vehicles)
                 if next_count == 1:
                     execute_scenario(relevant_customers=customer_lis, number_vehicles=number_vehicles,
                                      input_interface=input_interface,
@@ -139,21 +151,9 @@ def create_customer_sets(distance_limits, customer_groups_shuffled, total_numb_c
 
     return customer_scen_id_to_customer_list, customer_scen_id_to_coverage
 
-# 8 parallel scenarios, each of them defined by lb and ub
-
-# Dran denken! Wenn slice gewählt, neues root directory angeben
-c = CaseStudy_INPUT(0, 0, 'CI')
-# c = CaseStudy_INPUT(1)
-# c = CaseStudy_INPUT(2)
-# c = CaseStudy_INPUT(3)
-# c = CaseStudy_INPUT(4)
-# c = CaseStudy_INPUT(5)
-# c = CaseStudy_INPUT(6)
-# c = CaseStudy_INPUT(7)
 
 
+S = ['WDS', 'PNC', 'ELEC','ED']
+for s in S:
+    c = CaseStudy_INPUT([s], 0)
 
-
-
-# relevant_customers = [2, 543, 43, 43, 3]
-# num_vecs = 40 # wie hier upper bound herausfinden?
