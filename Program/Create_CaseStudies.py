@@ -16,7 +16,7 @@ class CaseStudy_INPUT():
         num_vehicles_required = 0
         for s in service_combi:
             max_needed_vecs_for_s = sum([input_gis.get_total_demands()[i, s] for i in customer_list]) # berechne Gesamtnachfrage für aktuellen Service
-            max_needed_vecs_for_s = max_needed_vecs_for_s / len(input_interface.T) # todo -> eig nicht ganz korrekt, da andere Constraints dies verhindern könnten, z.B. max_rnage
+            max_needed_vecs_for_s = max_needed_vecs_for_s / len(input_interface.T) * 1.5 # todo -> eig nicht ganz korrekt, da andere Constraints dies verhindern könnten, z.B. max_rnage
             max_needed_vecs_for_s = int(np.floor( max_needed_vecs_for_s / Q_s_max[s]) + 2)
             num_vehicles_required += max_needed_vecs_for_s
         return num_vehicles_required
