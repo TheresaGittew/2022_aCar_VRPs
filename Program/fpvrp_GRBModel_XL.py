@@ -184,6 +184,8 @@ class VRP_VBS_Optimizer:
         print(" .. setting default constraint 4.2 ... ")
 
         # constraint 4.2: no vehicle delivers any customer a quantity that exceeds w_i
+        print('self.C ' , self.C, ' self.K ', self.K, ' self.T', self.cfg.T, ' self.S ', self.S)
+
         self.mp.addConstrs(self.q[i, k, t, s] <= self.cfg.w[i,s] * self.z[i, k, t] for i in self.C for k in self.K for t in self.cfg.T for s in self.S)
         print(" .. setting default constraint 4.3  ... ")
         # constraint 4.3: establish that total quantity delivered by k at t does not exceed vehicle capa
@@ -377,7 +379,7 @@ class VRP_VBS_Optimizer:
             quicksum(self.y[i, j, k, t] * self.cfg.c[i, j] * 0.5 for (i, j) in self.A for t in self.cfg.T for k in self.K))
 
     def solve_model(self):
-        self.mp.Params.MIPGap = 0.6 if len(self.C) > 10 else 0.3
+        self.mp.Params.MIPGap = 0.5
         self.mp.Params.TimeLimit = 86000
         self.mp.Params.LazyConstraints = 1
         self.mp.Params.NonConvex = 2
