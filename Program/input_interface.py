@@ -9,7 +9,7 @@ class ReaderCapaOptions:
             os.path.abspath("README.md"))  # for example: /Users/theresawettig/PycharmProjects/2022_aCar_VRPs/Program
         self.root_directory_project = os.path.dirname(root_directory_program)
 
-    def __init__(self, services, path_to_capas='/GIS_Data/CaseStudy_Plan.csv'):
+    def __init__(self, services, path_to_capas='/GIS_Data/Capacity_Options.csv'):
         self.path_to_capas = path_to_capas
         self._get_root_directory()
         self.services = services
@@ -71,16 +71,6 @@ class ReaderCapaOptions:
 
 
 
-service_combis = [['WDS'], ['PNC'], ['ELEC'], ['ED'], ['WDS','PNC'],
-                  ['WDS', 'ELEC'], ['WDS','ED'], ['PNC','ELEC'],
-                  ['PNC','ED'],['ELEC','ED'], ['WDS','PNC','ELEC'],
-                  ['WDS','PNC','ED'], ['WDS','ELEC','ED'],['PNC','ELEC','ED'],
-                  ['WDS','PNC','ELEC','ED']]
-
-
-
-
-
 class DummyForExcelInterface:
 
     def __init__(self, services):
@@ -92,10 +82,20 @@ class DummyForExcelInterface:
         reader = ReaderCapaOptions([self.S])
 
         self.Q_h_s = reader.get_df()
+        print(self.Q_h_s)
         self.H = list(self.Q_h_s.keys())
 
+        self.cost_factor_per_km = 0.206 * 20 / 100
+        # laut evum motors:  Stromverbrauch: 17,5 –19,6 kWh/100 km (https://evum-motors.com/acar-konfigurator/), rounded to 20
+        # 20 kWh * 0.206 (Preis einer kwH) je kmw; https://www.german-energy-solutions.de/GES/Redaktion/DE/Publikationen/Marktanalysen/Laenderprofile/elfenbeinkueste.pdf?__blob=publicationFile&v=5
+
         self.fixed_costs = dict((h, 10000 + 2000 * len([i for i in self.Q_h_s[h].values() if i != 0.0])) for h in self.H)
-        self.service_times = {'WDS': 0.004, 'PNC': 0.1666, 'ELEC': 0.000083, 'ED': 0.083} # wds: 0.25 min! je flasche
+        self.service_times = {'WDS': 0.0005, 'PNC': 0.25, 'ELEC': (1/60)/200, 'ED': 1/60}
+        # #
+        # Annahmen: 0.5 h für 1000l Wasser => 0.0005  Min je Service
+        # PNC : 15 Minuten (siehe Quelle Internet)
+        # ELEC: 1 Minute je Battery Pack
+        # Education: 1 Minute je Buch
 
         self.daily_demand_factors = {'WDS': 1, 'ELEC': 1, 'ED': 1, 'PNC': 1},
 
@@ -103,7 +103,6 @@ class DummyForExcelInterface:
         # Inputs for consumption function
         daily_water_consumption_p_P = 3.2
         handy_battery_duration_in_days = 2
-        elec_people_per_pack = 200
 
         ed_services_per_week = 0.25
         pnc_births_per_women = 4.04 # https://data.worldbank.org/indicator/SP.DYN.TFRT.IN?locations=ET
@@ -117,8 +116,7 @@ class DummyForExcelInterface:
                                                'ELEC': (lambda x: (x * self.num_days / handy_battery_duration_in_days)
                                                                 ),
                                           'ED': (lambda x: x * ed_services_per_week),
-                                               'PNC': (lambda y:  required_visits_per_week *
-                                                                  (y * pnc_births_per_women)/ pnc_fertility_span)}
+                                               'PNC': (lambda y:  required_visits_per_week * y )}
         #self.max_num_vehicles = 25
         self.time_limit = 8
         self.stop_limit = 4
@@ -128,27 +126,3 @@ class DummyForExcelInterface:
 
     def get_vehiclecapa_numdays_S(self):
         return self
-#
-# class DummyForExcelInterface_IC:
-#
-#     def __init__(self):
-#         self.num_days = 5
-#         self.T = [i for i in range(self.num_days)]
-#         self.S = ['ELEC', 'PNC']
-#         self.H = [0, 1]
-#         self.Q_h_s = { (0, 'ELEC'): 1800, (0, 'PNC'): 25,
-#                        (1, 'ELEC'): 1000, (1, 'PNC'): 25}
-#
-#         self.fixed_costs = {0: 60000, 1: 50000}
-#
-#         self.service_times = {'PNC': 0.166, 'ELEC': 0.00833333, 'ED':0.0833}
-#
-#         self.daily_demand_factors = {'ELEC': 1, 'ED': 1, 'PNC': 1},
-#         self.functions_to_consumption_per_T = {'WDS': (lambda x: x * 3), 'ELEC': (lambda x: x * 1),
-#                                                'ED': (lambda x: x * 1), 'PNC': (lambda y: y * 3 / 52)}
-#
-#
-#     def get_vehiclecapa_numdays_S(self):
-#         return self
-
-print(DummyForExcelInterface(['ELEC']).Q_h_s)

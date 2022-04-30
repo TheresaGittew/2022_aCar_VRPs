@@ -6,6 +6,8 @@ from ExcelHandler import IOExcel
 import fpvrp_GRBModel_XL as fpvrps
 import os
 import pandas
+import statistics
+import numpy
 
 from Execute import sub_optimize_scenario
 
@@ -33,9 +35,9 @@ class VehicleSettings():
         # We predefine that there are usually 5 vehicle configurations to chose from for each combination
 
         if self.capa_size == 'L':
-            self.max_capa = 40
+            self.max_capa = 60
         else:
-            self.max_capa = 20
+            self.max_capa = 30
 
         # #
         # create all possible combinations of services from which vehicle configurations can be derived
@@ -91,7 +93,7 @@ class VehicleSettings():
 
 class SpacialStructure():
 
-    def __init__(self, num_customers, num_services, cluster_degree_choice=0, demand_q_opt='HOMOGEN', w_i_choice=0, cluster_degree=(0,1,2),
+    def __init__(self, num_customers, num_services, cluster_degree_choice=0, demand_q_opt='HOMOGEN', demand_height='HIGH', w_i_choice=0, cluster_degree=(0,1,2),
                  w_i_options=('EQ_W', 'HALF_W')):
         self.num_customers = num_customers
         self.customers = [i for i in range(self.num_customers)]
@@ -99,31 +101,42 @@ class SpacialStructure():
         self.demand_quantities = demand_q_opt
         self.w_i_cfg = w_i_options[w_i_choice]
         self.num_services = num_services
+        self.demand_height = demand_height
 
         self.coordinates_dict_x, self.coordinates_dict_y = self._create_nodes()
         self.dict_distance, self.dict_duration = self._create_matrix()
-        self.dict_i_s_to_total_demand = self._create_Wi()
+        self.dict_i_s_to_total_demand, self.mean, self.std = self._create_Wi()
         # print(self.dict_i_s_to_total_demand)
         self.dict_i_s_to_daily_demand = self._create_wi()
 
 
     def _create_Wi(self):
-        self.demand_range_lb_hg = 50
-        self.demand_range_ub_hg = 80
-        self.demand_range_lb_htg = iter(cycle((25, 50, 75)))
-        self.demand_range_ub_htg = iter(cycle((55, 80, 105)))
+        print(self.demand_height)
+        if self.demand_height == 'HIGH':
+            self.demand_range_lb_hg = 50
+            self.demand_range_ub_hg = 80
+            self.demand_range_lb_htg = iter(cycle((25, 50, 75)))
+            self.demand_range_ub_htg = iter(cycle((55, 80, 105)))
+
+        if self.demand_height == 'LOW':
+            self.demand_range_lb_hg = 30
+            self.demand_range_ub_hg = 60
+            self.demand_range_lb_htg = iter(cycle((5, 30, 55)))
+            self.demand_range_ub_htg = iter(cycle((35, 60, 85)))
 
         dict_i_s_to_total_demand = {}
         if self.demand_quantities == 'HOMOGEN':
             dict_i_s_to_total_demand = dict (((i,s), random.randint(self.demand_range_lb_hg, self.demand_range_ub_hg)) for i in self.customers for s in range(self.num_services))
         else :
             for s in range(self.num_services):
-                demand_lb = next(self.demand_range_lb_htg)
-                demand_ub = next(self.demand_range_ub_htg)
 
-                dict_i_s_to_total_demand = dict(((i, s), random.randint(demand_lb, demand_ub)) for i in self.customers
+                dict_i_s_to_total_demand = dict(((i, s), random.randint(next(self.demand_range_lb_htg), next(self.demand_range_ub_htg))) for i in self.customers
                                                 for s in range(self.num_services))
-        return dict_i_s_to_total_demand
+
+        mean_demand = statistics.mean(list(dict_i_s_to_total_demand.values()))
+        mean_deviation = numpy.std(list(dict_i_s_to_total_demand.values()))
+        print("mean demand" , mean_demand, " mean deviation : ", mean_deviation)
+        return dict_i_s_to_total_demand, mean_demand, mean_deviation
 
     def _create_wi(self):
         dict_i_s_to_daily_demand = {}
@@ -136,7 +149,8 @@ class SpacialStructure():
     def _euclidean_distance(self, i,j):
         x_distance = abs(self.coordinates_dict_x[i] - self.coordinates_dict_x[j])
         y_distance = abs(self.coordinates_dict_y[i] - self.coordinates_dict_y[j])
-        return round(np.sqrt([x_distance ** 2 + y_distance ** 2])[0],2)
+        print ("euclidean distance : ", round(np.sqrt([x_distance ** 2 + y_distance ** 2])[0],2) * 40)
+        return round(np.sqrt([x_distance ** 2 + y_distance ** 2])[0] * 40 ,2)
 
     def _create_matrix(self):
         tempo = 40  # km / h
@@ -207,7 +221,7 @@ class Scenario():
 class Scenario_Creator():
 
     def _create_pandas_summary_skeleton(self):
-        self.pd_cols = ['Cluster_Deg', 'Quantity_Structure', 'Num_Cust', 'Amount_Services', 'Capa_Size_Opt', 'Vehicle_UB','Max_Stops', 'Duration','Gap','ObjVal']
+        self.pd_cols = ['InstanceNo', 'Cluster_Deg', 'Quantity_Structure', 'DemandHeight', 'DemandAv', 'DemandStdDev', 'Num_Cust', 'Amount_Services', 'Capa_Size_Opt', 'Vehicle_UB','Max_Stops', 'Duration','Gap','ObjVal']
         pd_index = pandas.Index([i for i in range(len(self.scenarios))], name='Scenario_ID')
         pd_df_summary = pandas.DataFrame(np.zeros(( len(self.scenarios),len(self.pd_cols))), index=pd_index, columns=self.pd_cols)
         return pd_df_summary
@@ -219,13 +233,22 @@ class Scenario_Creator():
         next_scenario = self.get_next_scenario()
 
         while next_scenario:
-            scen_count, scen_wrapped, scenario, cfg_params, io_excel = next_scenario
+            (scen_count, next_scen_wrapped, sp_dem_strc), scenario, cfg_params, io_excel = next_scenario
+
             objVal, runtime, gap = sub_optimize_scenario(scenario, cfg_params, io_excel)
+
+
 
             # #
             # save details about current scenario
-            dem_clus_opt, dem_q_opt, n_cust, n_serv, cap_size_opt, vehicle_ub, m_stops = scen_wrapped
-            pd_df_summary.loc[[scen_count], self.pd_cols] = [dem_clus_opt, dem_q_opt, n_cust, n_serv, cap_size_opt, vehicle_ub, m_stops, runtime, gap, objVal]
+            dem_clus_opt, dem_q_opt, dem_h_opt, n_cust, n_serv, cap_size_opt, vehicle_ub, m_stops, instance_no_per_scen = next_scen_wrapped
+            pd_df_summary.loc[[scen_count], self.pd_cols] = [instance_no_per_scen, dem_clus_opt, dem_q_opt, dem_h_opt,
+                                                             sp_dem_strc.mean,
+                                                             sp_dem_strc.std, n_cust, n_serv, cap_size_opt,
+                                                             vehicle_ub, m_stops, runtime, gap, objVal]
+
+            # #
+            # go to next scenario
             next_scenario = self.get_next_scenario()
 
         pandas.set_option("display.max_rows", None, "display.max_columns", None)
@@ -238,25 +261,40 @@ class Scenario_Creator():
 
 
 
-    def __init__(self, root_directory):
-        self.folder_title = '04_25_CompExTest'
+    def __init__(self, root_directory, folder_title):
+        self.folder_title = folder_title
         self.scenario_count = -1
         self.root_directory = root_directory
 
         # #
         # Parameters to variate in study
-        demand_cluster_options = [0, 2]
+        demand_cluster_options = [0]
         demand_quantities_options = ['HOMOGEN', 'HETEROGENEOUS']
-        number_customers = [10, 30]
-        amount_services = [2, 4]
-        capacity_size_options = [ 'L']
-        vehicle_num_ubs = [50]
-        max_stops = [5]
+        demand_height_options = ['HIGH', 'LOW']
+        number_customers = [12]
+        amount_services = [2]
+        capacity_size_options = ['L']
+        vehicle_num_ubs = [20]
+        max_stops = [3]
 
 
-        self.scenarios = list(itertools.product(demand_cluster_options, demand_quantities_options,
+
+        # #
+        # Parameters to variate in study
+        demand_cluster_options = [0]
+        demand_quantities_options = ['HOMOGEN','HETEROGENEOUS']
+        demand_height_options = ['HIGH']
+        number_customers = [10]
+        amount_services = [3]
+        capacity_size_options = ['L']
+        vehicle_num_ubs = [20] #zuvor: 15
+        max_stops = [3]
+        instances_per_scen = [i for i in range(20)]
+
+        self.scenarios = list(itertools.product(demand_cluster_options, demand_quantities_options, demand_height_options,
                                                      number_customers, amount_services, capacity_size_options,
-                                                     vehicle_num_ubs, max_stops))
+                                                     vehicle_num_ubs, max_stops, instances_per_scen))
+        print(self.scenarios)
 
         self.scenarios_iter = iter(self.scenarios)
 
@@ -268,13 +306,12 @@ class Scenario_Creator():
         next_scen_wrapped = next(self.scenarios_iter, None)
         if not next_scen_wrapped: return None
         else:
-            print("next scenario", self.scenario_count)
-            dem_clus_opt, dem_q_opt, n_cust, n_serv, cap_size_opt, vehicle_ub, m_stops = next_scen_wrapped
-
+            dem_clus_opt, dem_q_opt, dem_h_opt, n_cust, n_serv, cap_size_opt, vehicle_ub, m_stops , instance_no_per_scen = next_scen_wrapped
+            print("next scenario", self.scenario_count, " instance for that scenario :", instance_no_per_scen)
 
             # #
-            # Create spatial demand structure for current scenario
-            sp_dem_strc = SpacialStructure(n_cust, n_serv, dem_clus_opt, dem_q_opt, 0)
+            # Create spatial demand structure for current instance
+            sp_dem_strc = SpacialStructure(n_cust, n_serv, dem_clus_opt, dem_q_opt, dem_h_opt, 0)
 
             # #
             # we need scenario object
@@ -283,7 +320,7 @@ class Scenario_Creator():
             # #
             # create cfg object
             services = [i for i in range(n_serv)]
-            service_times = [0.01 for i in services]
+            service_times = [0.2 for i in services]
 
             vehic_settings = VehicleSettings(n_serv,  cap_size_opt)
 
@@ -296,7 +333,7 @@ class Scenario_Creator():
                                                  H=vehic_settings.H,
                                                  travel_time=sp_dem_strc.dict_duration, Q_h_s=vehic_settings.Q_h_s,
                                                  fixed_costs_h=vehic_settings.fixed_vehicle_costs,
-                                                 service_time=service_times, stop_limit=m_stops)
+                                                 service_time=service_times, time_limit=8, stop_limit=m_stops, range_limit=200)
 
             # Anlegen Excel-Objekt als Handler der Ergebnisse (ohne Nachbearbeitung)
             io_excel = IOExcel(scenario, root_directory=self.root_directory,
@@ -308,10 +345,12 @@ class Scenario_Creator():
                                output_tab_names=('Z', 'Y', 'Q', 'U'))
             self.scenario_count += 1
 
-            return self.scenario_count, next_scen_wrapped, scenario, cfg_params, io_excel
+            instance_info = self.scenario_count, next_scen_wrapped, sp_dem_strc
+
+            return instance_info, scenario, cfg_params, io_excel
 
 #s = Scenario_Creator(_get_root_directory())
 #sub_optimize_scenario(scenario, cfg_params, io_excel)
-Scenario_Creator(_get_root_directory()).execute_all_scenarios()
+Scenario_Creator(_get_root_directory(), '04_28_CompExTest_STANDARD_10Cust_HIGH_4S').execute_all_scenarios()
 
 

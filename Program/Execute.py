@@ -9,15 +9,22 @@ import random
 from itertools import cycle
 
 
-
 def sub_optimize_scenario(scenario, cfg_params, io_excel):
     model = fpvrps.VRP_VBS_Optimizer(cfg_params, scenario)
     model.set_constraints()
     model.set_objective()
-    model.solve_model()
-    io_excel.save_gurobi_res_in_excel\
-            ([model.z, model.y, model.q, model.u], model.mp.objVal, model.mp.Runtime, model.mp.MIPGap)
-    return model.mp.objVal, model.mp.Runtime, model.mp.MIPGap
+    model_status = model.solve_model()
+
+    # #
+    # check if feasible solution has been obtained
+    if not model_status == 'OPTIMAL':
+        print("here ; this is obj val: ", model.mp.objVal)
+        return '-', model.mp.Runtime, model.mp.MIPGap
+    else:
+        io_excel.save_gurobi_res_in_excel\
+                ([model.z, model.y, model.q, model.u], model.mp.objVal, model.mp.Runtime, model.mp.MIPGap)
+        return model.mp.objVal, model.mp.Runtime, model.mp.MIPGap
+
 
 def sub_postprocess_grb_results(scenario, framework_input, io_excel_grb_results, io_excel_processed_results, input_gis):
     grb_results_in_pd_dfs = io_excel_grb_results.get_results_from_excel_to_df(with_multiindex=True)

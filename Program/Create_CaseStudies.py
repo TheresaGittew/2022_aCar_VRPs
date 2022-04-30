@@ -6,9 +6,7 @@ from Execute import execute_scenario
 import random
 import itertools
 
-#slice= [37, 9, 30, 35, 27, 52, 41, 51, 45, 16, 13, 29, 40, 36, 4]
 
-# enter number as run_type between 0 and 7 for specifying the specific case study (customer 'fragment')
 class CaseStudy_INPUT():
 
     def _get_num_vec_ub(self, service_combi, input_gis, customer_list, input_interface):
@@ -16,14 +14,14 @@ class CaseStudy_INPUT():
         num_vehicles_required = 0
         for s in service_combi:
             max_needed_vecs_for_s = sum([input_gis.get_total_demands()[i, s] for i in customer_list]) # berechne Gesamtnachfrage für aktuellen Service
-            max_needed_vecs_for_s = max_needed_vecs_for_s / len(input_interface.T) * 1.5 # todo -> eig nicht ganz korrekt, da andere Constraints dies verhindern könnten, z.B. max_rnage
-            max_needed_vecs_for_s = int(np.floor( max_needed_vecs_for_s / Q_s_max[s]) + 2)
+            max_needed_vecs_for_s = max_needed_vecs_for_s / len(input_interface.T)
+            max_needed_vecs_for_s = int(np.ceil( max_needed_vecs_for_s * 2 / Q_s_max[s]))
             num_vehicles_required += max_needed_vecs_for_s
         return num_vehicles_required
 
 
 
-    def __init__(self, service_combi, zone_id=0, case_study_type='ET', slice=None, root_directory='04_24_01GAP_CaseStudy', customer_fragment=((0, 60), (60, 90), (90,100))):
+    def __init__(self, service_combi, zone_id=0, case_study_type='ET', slice=None, root_directory='shorrtest', customer_fragment=((0, 60), (60, 90), (90,100))):
         self.separate_runs = customer_fragment
         self.root_directory = root_directory +'_' + case_study_type +'_' + str(zone_id) + '/'
         if slice:
@@ -153,7 +151,13 @@ def create_customer_sets(distance_limits, customer_groups_shuffled, total_numb_c
 
 
 
-S = [['PNC'], ['ELEC'],['PNC', 'ELEC']]
-for s in S:
-    c = CaseStudy_INPUT(s, 0, 'CI')
+S_1 = [['PNC'], ['WDS'], ['ELEC'],['ED']]
+S_2 = [['WDS','PNC'],['WDS', 'ED'], ['WDS','ELEC']]
+S_3 = [['PNC','ELEC'], ['PNC','ED'], ['ELEC','ED']]
+S_4 = [['WDS','PNC','ELEC'], ['WDS','PNC','ED']]
+S_5 = [['WDS','ELEC','ED'], ['PNC','ELEC','ED']]
+S_6 = [['WDS','PNC','ELEC','ED']]
+
+for s in S_1:  # adjust set according to relevant run
+    c = CaseStudy_INPUT(s, 0)
 

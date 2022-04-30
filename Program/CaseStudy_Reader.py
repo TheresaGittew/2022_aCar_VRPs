@@ -80,39 +80,41 @@ class Result_Summarizer():
             for s in service_combis:
                 s_to_string = self._map_single_service_list(s)
                 excel_path = self._get_correct_excel(c, s)
-                # #
-                # Add percentage of current customer scenario
-                self.pd_df_summary[c][s_to_string, '%Cov.'] = self.dict_customerscen_to_percentage[c]
-                print(self.pd_df_summary)
+                if excel_path:
+                    # #
+                    # Add percentage of current customer scenario
+                    self.pd_df_summary[c][s_to_string, '%Cov.'] = self.dict_customerscen_to_percentage[c]
+                    print(self.pd_df_summary)
 
 
 
-                # #
-                # add objective value - total costs - and computation time
-                print("here !! excel path: ", excel_path, "service: ", s, " cleint: ", c)
-                obj_val, comp_time, gap = self._get_total_costs_and_comp_time(excel_path)
-                self.pd_df_summary[c][s_to_string, 'T.C.'] = obj_val
-                self.pd_df_summary[c][s_to_string, 'Comp.T.'] = comp_time
-                self.pd_df_summary[c][s_to_string, 'Gap[%]'] = gap
+                    # #
+                    # add objective value - total costs - and computation time
+                    print("here !! excel path: ", excel_path, "service: ", s, " cleint: ", c)
+                    obj_val, comp_time, gap = self._get_total_costs_and_comp_time(excel_path)
+                    self.pd_df_summary[c][s_to_string, 'T.C.'] = obj_val
+                    self.pd_df_summary[c][s_to_string, 'Comp.T.'] = comp_time
+                    self.pd_df_summary[c][s_to_string, 'Gap[%]'] = gap
 
-                # #
-                # add variable costs
-                self.pd_df_summary[c][s_to_string, 'Vr.C.'] = self._get_variable_costs(excel_path, self._get_gis(s))
-                self.pd_df_summary[c][s_to_string, 'T.Km.'] = self._get_variable_costs(excel_path, self._get_gis(s))
+                    # #
+                    # add variable costs
+                    self.pd_df_summary[c][s_to_string, 'Vr.C.'] = self._get_variable_costs(excel_path, self._get_gis(s))
+                    self.pd_df_summary[c][s_to_string, 'T.Km.'] = self._get_variable_costs(excel_path, self._get_gis(s))
 
-                # #
-                # get fixed costs
-                self.pd_df_summary[c][s_to_string, 'Fx.C.'] = self._get_fixed_costs(excel_path, self._get_interface(s))
+                    # #
+                    # get fixed costs
+                    self.pd_df_summary[c][s_to_string, 'Fx.C.'] = self._get_fixed_costs(excel_path, self._get_interface(s))
 
-                # #
-                # vehicle number and amount of different types
-                num_vecs, num_vec_types =  self._get_vehicle_number_and_num_types(excel_path)
-                self.pd_df_summary[c][s_to_string, 'N.V.'] = num_vecs
-                self.pd_df_summary[c][s_to_string, 'N.VT.'] = num_vec_types
+                    # #
+                    # vehicle number and amount of different types
+                    num_vecs, num_vec_types =  self._get_vehicle_number_and_num_types(excel_path)
+                    self.pd_df_summary[c][s_to_string, 'N.V.'] = num_vecs
+                    self.pd_df_summary[c][s_to_string, 'N.VT.'] = num_vec_types
 
-                # #
-                # utilization
-                self.pd_df_summary[c][s_to_string, 'V.Ut.'] = self._get_utilization(excel_path, num_vecs )
+                    # #
+                    # utilization
+                    self.pd_df_summary[c][s_to_string, 'V.Ut.'] = self._get_utilization(excel_path, num_vecs )
+
 
         pd.set_option("display.max_rows", None, "display.max_columns", None)
         path_to_case_study_output_excel = self.root_directory + self.path_to_output + '/' + self.folder_name.split('/')[-1]+'.xlsx'
@@ -222,8 +224,8 @@ class Result_Summarizer():
         return round(utilization, num_digits_round)
 
 
-Result_Summarizer(folder_name='/Program/04_24_01GAP_CaseStudy_CI_0',
-                  relative_path_to_demand='/GIS_Data/IC_Location_Data.csv',
-                  relative_path_to_coors='/GIS_Data/IC_Coordinates.csv',
-                  relative_path_to_od_matrix='/GIS_Data/IC_ODs.csv')
+Result_Summarizer(folder_name='/Program/04_25_ET',
+                  relative_path_to_demand='/GIS_Data/ET_Location_Data.csv',
+                  relative_path_to_coors='/GIS_Data/ET_Coordinates.csv',
+                  relative_path_to_od_matrix='/GIS_Data/ET_ODs.csv')
 

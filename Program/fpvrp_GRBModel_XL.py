@@ -287,9 +287,9 @@ class VRP_VBS_Optimizer:
 
 
 
-    def set_max_num_stops(self): # todo => max_stops in config class
-        print("set max num stops")
-        self.mp.addConstrs(quicksum(self.z[i, k, t] for i in self.C ) <= 4 for k in self.K for t in self.cfg.T)
+    def set_max_num_stops(self):
+        print("set max num stops to: ", self.cfg.stop_limit)
+        self.mp.addConstrs(quicksum(self.z[i, k, t] for i in self.C ) <= self.cfg.stop_limit for k in self.K for t in self.cfg.T)
 
     def set_time_limit(self):
         print("set time limit to" , str(self.cfg.time_limit))
@@ -304,59 +304,7 @@ class VRP_VBS_Optimizer:
                            <= self.cfg.range_limit for k in self.K for t in self.cfg.T)
 
     #
-    # def set_battery_constraints(self):
-    #     print("... setting battery constraints ... ")
-    #     self.mp.addConstrs(quicksum(self.l[i, j, k, t, s] for i in self.N if (i,j) in self.A)
-    #                        == quicksum(self.l[j, i_2, k, t, s] for i_2 in self.N if (j, i_2) in self.A) + self.q[j, k, t, s]
-    #                       for j in self.C for k in self.K for t in self.cfg.T for s in self.S)
-    #
-    #     self.mp.addConstrs(self.l[i, index_hub, k, t, s]  == 0
-    #                        for i in self.N if (i, index_hub) in self.A for k in self.K for t in self.cfg.T for s in self.S)
-    #
-    #
-    #     self.mp.addConstrs(
-    #         self.l[i, j, k, t, s] <= (self.y[i, j, k, t]) * 1500
-    #         for i in self.N for j in self.C if (i, j) in self.A for k in self.K for t in self.cfg.T for s in self.S)
-    #
-    #     for t in self.cfg.T:
-    #         for k in self.K:
-    #             for i in self.N:
-    #                 for j in self.N:
-    #                     if (i,j) in self.A:
-    #
-    #                         if i == index_hub:
-    #                             self.mp.addConstr(
-    #                                 self.full_rng_for_l[i, k, t] - self.cfg.c[i, j] >=
-    #                                 self.battery[j, k, t] * self.full_rng_for_l[i, k, t] - 5000 * (
-    #                                         1 - self.y[i, j, k, t]))
-    #                         elif j == index_hub:
-    #                             self.mp.addConstr(self.battery[i, k, t] * self.full_rng_for_l[i, k, t] - self.cfg.c[i, j] >=
-    #                                 - 5000 * (1 - self.y[i, j, k, t]))
-    #                         else:
-    #                             self.mp.addConstr(self.battery[i, k, t] * self.full_rng_for_l[i, k, t] -  self.cfg.c[i, j] >=
-    #                                               self.battery[j, k, t] * self.full_rng_for_l[i, k, t] - 5000 * (1 - self.y[i, j, k, t]))
-    #
-    #
-    #
-    #     weights = {'PNC': 0.3, 'WDS' : 1}
-    #     for t in self.cfg.T:
-    #         for k in self.K:
-    #             for i in self.N:
-    #                 self.mp.addConstr(self.full_rng_for_l[i, k, t] ==
-    #                                               funct_weight_to_range(quicksum(self.l[i, j, k, t, s] * weights[s]
-    #                                                                              for s in self.cfg.S for j in self.C if (i,j) in self.A)))
-    #             # todo: not n?!
-    #     #self.mp.addConstrs( self.battery[i, k, t] >= 0 for i in [index_hub] for k in self.K for t in self.cfg.T)
-    #
-    #
-    #
-    # def set_subtour_elim_constraint(self):
-    #     print(" .. setting default constraint 4.7  ... ")
-    #     subtour_elim_constrs = self.mp.addConstrs(quicksum(self.y[i,j,k,t] for i,j in self.cfg.subset_id_to_A[c_sub_id])
-    #                       <= quicksum(self.z[i,k,t] for i in self.cfg.subset_id_to_C[c_sub_id]) - self.z[i_2, k,t]
-    #                       for c_sub_id in self.cfg.C_subset_ids for i_2 in self.cfg.subset_id_to_C[c_sub_id]
-    #                       for k in self.K for t in self.cfg.T)
-    #
+
 
     def set_constraints(self):
         self.__set_default_constraints()
@@ -366,8 +314,6 @@ class VRP_VBS_Optimizer:
 
     def set_objective(self):
         self.mp.modelSense = GRB.MINIMIZE
-
-        print(" .. set objective ...")
         self.mp._z = self.z
         self.mp._y = self.y
         self.mp._captured_tours = []
@@ -376,20 +322,27 @@ class VRP_VBS_Optimizer:
         # here, you can potentially add further cost factorsself
         self.mp.setObjective(
             quicksum(self.cfg.f[h] * self.u[h,k] for h in self.cfg.H for k in self.K) +
-            quicksum(self.y[i, j, k, t] * self.cfg.c[i, j] * 0.5 for (i, j) in self.A for t in self.cfg.T for k in self.K))
+            quicksum(self.y[i, j, k, t] * self.cfg.c[i, j] * self.cfg.cost_factor_per_km for (i, j)
+                     in self.A for t in self.cfg.T for k in self.K))
 
     def solve_model(self):
-        self.mp.Params.MIPGap = 0.5
-        self.mp.Params.TimeLimit = 86000
+        self.mp.Params.MIPGap = 0.2
+        self.mp.Params.TimeLimit = 43200 # 12 stunden
         self.mp.Params.LazyConstraints = 1
-        self.mp.Params.NonConvex = 2
         self.mp.optimize(callback)
-        self.print_output()
+
+        if self.mp.status == GRB.INF_OR_UNBD:
+            return 'NO_GAP'
+
+        if self.mp.status == GRB.OPTIMAL:
+            return 'OPTIMAL'
+
+        elif self.mp.status == GRB.INFEASIBLE:
+            return 'INFEASIBLE'
 
 
     def print_output(self):
         print("RUNTIME ", self.mp.Runtime, " OPTIMAL VALUE " , self.mp.objVal)
-        #print("Optimal Value : " , self.mp.objVal)
 
 class FPVRPVecIndPreProcess:
 
@@ -429,7 +382,7 @@ class FPVRPVecIndPreProcess:
 class FPVRPVecIndConfg:
 
     def __init__(self, T,  W_i, w_i, c, coordinates, S, H, travel_time, Q_h_s, fixed_costs_h, service_time,
-                 time_limit=8, stop_limit=3, range_limit=300):
+                 time_limit, stop_limit, range_limit, cost_factor_per_km):
 
         self.T = T
         self.W = W_i # total demand for entire planning horizon (nested dict)
@@ -446,6 +399,8 @@ class FPVRPVecIndConfg:
         self.time_limit = time_limit
         self.stop_limit = stop_limit
         self.range_limit = range_limit
+        self.cost_factor_per_km = cost_factor_per_km
+
 
         self.H = H
         self.Q_h_s = Q_h_s
