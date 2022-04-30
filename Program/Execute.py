@@ -74,7 +74,9 @@ def execute_scenario(relevant_customers, number_vehicles, input_interface, input
                                           coordinates=input_gis.get_coors(), S=input_interface.S, H=input_interface.H,
                                           travel_time=input_gis.get_od_to_time(), Q_h_s=input_interface.Q_h_s,
                                           fixed_costs_h=input_interface.fixed_costs,
-                                          service_time=input_interface.service_times)
+                                          service_time=input_interface.service_times, time_limit=input_interface.time_limit,
+                                         stop_limit=input_interface.stop_limit, range_limit=input_interface.range_limit,
+                                         cost_factor_per_km=input_interface.cost_factor_per_km)
 
     # #
     # Anlegen Excel-Objekt als Handler der Ergebnisse (ohne Nachbearbeitung)

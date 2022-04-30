@@ -21,7 +21,7 @@ class CaseStudy_INPUT():
 
 
 
-    def __init__(self, service_combi, zone_id=0, case_study_type='ET', slice=None, root_directory='shorrtest', customer_fragment=((0, 60), (60, 90), (90,100))):
+    def __init__(self, service_combi, zone_id=0, case_study_type='ET', slice=None, root_directory='04_30', customer_fragment=((0, 60), (60, 90), (90,100))):
         self.separate_runs = customer_fragment
         self.root_directory = root_directory +'_' + case_study_type +'_' + str(zone_id) + '/'
         if slice:
