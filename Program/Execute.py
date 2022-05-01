@@ -18,7 +18,7 @@ def sub_optimize_scenario(scenario, cfg_params, io_excel):
     # #
     # check if feasible solution has been obtained
     if not model_status == 'OPTIMAL':
-        print("here ; this is obj val: ", model.mp.objVal)
+        #print("here ; this is obj val: ", model.mp.objVal)
         return '-', model.mp.Runtime, model.mp.MIPGap
     else:
         io_excel.save_gurobi_res_in_excel\
@@ -86,20 +86,20 @@ def execute_scenario(relevant_customers, number_vehicles, input_interface, input
                                                 ['Customer', 'Vehicle', 'Day', 'ServiceType'],
                                                 ['ConfigType', 'Vehicle']), output_tab_names=('Z', 'Y', 'Q', 'U'))
 
-    sub_optimize_scenario(scenario, cfg_params, io_excel)
+    objval, r, g =  sub_optimize_scenario(scenario, cfg_params, io_excel)
+    if objval != '-':
+        io_excel_for_processed_data = IOExcel(scenario, root_directory=root_directory, scenario_id=''+str(services_scenario)
+                                                                                                   +' '+str(customer_scenario)
+                                                                                                   +' '+str(percentage),
+                                           add_to_folder_title='', title_excel_to_create_or_read="DecisionvariableValues_PP.xlsx",
+                                           titles_keys_per_dec_var=(
+                                           ['Customer', 'Vehicle', 'Day'], ['O', 'D', 'Vehicle', 'Day'],
+                                           ['Customer', 'Vehicle', 'Day', 'ServiceType'], ['ConfigType', 'Vehicle']),
+                                           output_tab_names=('Z', 'Y', 'Q', 'U'))
 
-    io_excel_for_processed_data = IOExcel(scenario, root_directory=root_directory, scenario_id=''+str(services_scenario)
-                                                                                               +' '+str(customer_scenario)
-                                                                                               +' '+str(percentage),
-                                       add_to_folder_title='', title_excel_to_create_or_read="DecisionvariableValues_PP.xlsx",
-                                       titles_keys_per_dec_var=(
-                                       ['Customer', 'Vehicle', 'Day'], ['O', 'D', 'Vehicle', 'Day'],
-                                       ['Customer', 'Vehicle', 'Day', 'ServiceType'], ['ConfigType', 'Vehicle']),
-                                       output_tab_names=('Z', 'Y', 'Q', 'U'))
-
-    sub_postprocess_grb_results(scenario, cfg_params, io_excel, io_excel_for_processed_data, input_gis)
-    sub_vizualize_results(scenario, cfg_params, io_excel_for_processed_data,
-                          io_excel_for_processed_data.get_path_str_for_scenario())
+        sub_postprocess_grb_results(scenario, cfg_params, io_excel, io_excel_for_processed_data, input_gis)
+        sub_vizualize_results(scenario, cfg_params, io_excel_for_processed_data,
+                              io_excel_for_processed_data.get_path_str_for_scenario())
 
 # services = [['WDS']]
 # input_interface = DummyForExcelInterface(services[0])
