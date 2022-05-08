@@ -269,7 +269,7 @@ class Scenario_Creator():
         # #
         # Parameters to variate in study
         demand_cluster_options = [0]
-        demand_quantities_options = ['HOMOGEN', 'HETEROGENEOUS']
+        demand_quantities_options = ['HOMOGEN']
         demand_height_options = ['HIGH', 'LOW']
         number_customers = [12]
         amount_services = [2]
@@ -282,7 +282,7 @@ class Scenario_Creator():
         # #
         # Parameters to variate in study
         demand_cluster_options = [0]
-        demand_quantities_options = ['HOMOGEN','HETEROGENEOUS']
+        demand_quantities_options = ['HOMOGEN']
         demand_height_options = ['HIGH']
         number_customers = [10]
         amount_services = [2]
