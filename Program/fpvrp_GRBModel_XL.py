@@ -327,11 +327,11 @@ class VRP_VBS_Optimizer:
                      in self.A for t in self.cfg.T for k in self.K))
 
     def solve_model(self):
-        self.mp.Params.MIPGap = 0.15
-        self.mp.Params.TimeLimit = 43200 # 12 stunden
+        self.mp.Params.MIPGap = 0.25
+        self.mp.Params.TimeLimit = 2000 # 12 stunden
         self.mp.Params.LazyConstraints = 1
         self.mp.optimize(callback)
-
+        print("STATUS : ", self.mp.status)
         if self.mp.status == GRB.INF_OR_UNBD:
             return 'NO_GAP'
 
