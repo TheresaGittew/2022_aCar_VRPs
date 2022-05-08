@@ -143,12 +143,13 @@ class InputGISReader:
         tempo = 40  # km / h
         self.dict_distance = dict(((i,j), self._euclidean_distance(i,j)) for i in self.customers + [index_hub] for j in self.customers + [index_hub] if i != j)
         self.dict_duration = dict(((i,j), self.dict_distance[i,j] / tempo) for i in self. customers+ [index_hub] for j in self.customers + [index_hub] if i != j)
-       # print(self.dict_distance)
+        print("ODs"  , self.dict_distance)
 
     def get_od_to_time(self):
         return self.dict_duration
 
     def get_od_to_dist(self):
+        print(self.dict_distance)
         return self.dict_distance
 
 

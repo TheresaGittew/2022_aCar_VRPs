@@ -252,7 +252,7 @@ class Scenario_Creator():
             next_scenario = self.get_next_scenario()
 
         pandas.set_option("display.max_rows", None, "display.max_columns", None)
-        path_to_case_study_output_excel = self.root_directory +'/scenario_'+ self.folder_title + '/' + '_Summary_' + '.xlsx'
+        path_to_case_study_output_excel = self.root_directory +'/Program/scenario_'+ self.folder_title + '/' + '_Summary_' + '.xlsx'
         print(path_to_case_study_output_excel)
         writer = pandas.ExcelWriter(path_to_case_study_output_excel, engine='xlsxwriter')
         pd_df_summary.to_excel(writer, engine='xlsxwriter')
@@ -285,9 +285,9 @@ class Scenario_Creator():
         demand_quantities_options = ['HOMOGEN','HETEROGENEOUS']
         demand_height_options = ['HIGH']
         number_customers = [10]
-        amount_services = [3]
+        amount_services = [2]
         capacity_size_options = ['L']
-        vehicle_num_ubs = [20] #zuvor: 15
+        vehicle_num_ubs = [15] #zuvor: 15
         max_stops = [3]
         instances_per_scen = [i for i in range(20)]
 
@@ -324,7 +324,7 @@ class Scenario_Creator():
 
             vehic_settings = VehicleSettings(n_serv,  cap_size_opt)
 
-            cfg_params = fpvrps.FPVRPVecIndConfg(self.T, W_i=sp_dem_strc.dict_i_s_to_total_demand,
+            cfg_params = fpvrps.FPVRPVecIndConfg(self.T,  W_i=sp_dem_strc.dict_i_s_to_total_demand,
                                                  w_i=sp_dem_strc.dict_i_s_to_daily_demand
                                                  , c=sp_dem_strc.dict_distance,
                                                  coordinates=(sp_dem_strc.coordinates_dict_x,
@@ -333,7 +333,7 @@ class Scenario_Creator():
                                                  H=vehic_settings.H,
                                                  travel_time=sp_dem_strc.dict_duration, Q_h_s=vehic_settings.Q_h_s,
                                                  fixed_costs_h=vehic_settings.fixed_vehicle_costs,
-                                                 service_time=service_times,  time_limit=8, stop_limit=m_stops, range_limit=200)
+                                                 service_time=service_times,  time_limit=8, stop_limit=m_stops, range_limit=200, cost_factor_per_km=1)
 
             # Anlegen Excel-Objekt als Handler der Ergebnisse (ohne Nachbearbeitung)
             io_excel = IOExcel(scenario, root_directory=self.root_directory,
@@ -351,6 +351,6 @@ class Scenario_Creator():
 
 #s = Scenario_Creator(_get_root_directory())
 #sub_optimize_scenario(scenario, cfg_params, io_excel)
-Scenario_Creator(_get_root_directory(), '04_28_CompExTest_STANDARD_10Cust_HIGH_4S').execute_all_scenarios()
+Scenario_Creator(_get_root_directory(), '05_28_CompExTest_STANDARD_10_Cust_2_Services').execute_all_scenarios()
 
 

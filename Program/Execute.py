@@ -17,8 +17,9 @@ def sub_optimize_scenario(scenario, cfg_params, io_excel):
 
     # #
     # check if feasible solution has been obtained
-    if not model_status == 'OPTIMAL':
-        #print("here ; this is obj val: ", model.mp.objVal)
+    if model_status == 'NO_GAP':
+        print("no gap!")
+       # print("here ; this is obj val: ", model.mp.objVal)
         return '-', model.mp.Runtime, model.mp.MIPGap
     else:
         io_excel.save_gurobi_res_in_excel\

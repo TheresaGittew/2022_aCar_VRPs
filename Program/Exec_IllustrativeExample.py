@@ -2,8 +2,9 @@
 import fpvrp_GRBModel_XL as fpvrps
 import fpvrp_PostProcessing as postprocessor
 from fpvrp_RouteVizualizer import PVRP_Vizualizer
-from fpvrp_ParameterInputClasses import InputGISReader, Scenario, DummyForExcelInterface
+from fpvrp_ParameterInputClasses import InputGISReader, Scenario
 from ExcelHandler import IOExcel
+
 import random
 from itertools import cycle
 
@@ -52,10 +53,11 @@ def vizualize_results(scenario, framework_input, io_excel, root_directory_saving
 
 # #
 # constructing basic input objects (input_gis info; scenario info; general "paramter" info)
-vehicle_capa, T, S = DummyForExcelInterface().get_vehiclecapa_numdays_S() # to be replaced by class which extracts from excel file
+vehicle_capa = {0:{'PNC':10, 'WDS':250, 'ELEC':60}, 1:{'PNC':12, 'WDS':500, 'ELEC':100}}
+S =  ['WDS','PNC', 'ELEC'] # to be replaced by class which extracts from excel file
 T = [0,1,2]
 print(S)
-input_gis = InputGISReader(relative_path_to_demand='/IllustrativeExample/IE_DemandData.csv',
+input_gis = InputGISReader(daily_demand_factors={'WDS': 0.3, 'ELEC': 0.8, 'PNC': 1} , functions_to_consumption_per_T={'WDS': lambda x: x, 'ELEC': lambda x: x, 'PNC': lambda x: x}, relative_path_to_demand='/IllustrativeExample/IE_DemandData.csv',
                            relative_path_to_coors='/IllustrativeExample/IE_Coordinates.csv',
                            relative_path_to_od_matrix='/', services=S) # important: stick to order in .csv!
 
@@ -72,14 +74,14 @@ framework_input = fpvrps.FPVRPVecIndConfg(T,  W_i = input_gis.get_total_demands(
                                            coordinates=input_gis.get_coors(), S=S, travel_time=input_gis.get_od_to_time())
 
 
-io_excel = IOExcel(scenario, root_directory='04-07-IllstrExample', add_to_folder_title='_2', title_excel_to_create_or_read="DecisionvariableValues.xlsx",
+io_excel = IOExcel(scenario, root_directory='07-07-IllstrExample', add_to_folder_title='_2', title_excel_to_create_or_read="DecisionvariableValues.xlsx",
                      titles_keys_per_dec_var=(['Customer', 'Vehicle', 'Day'], ['O', 'D', 'Vehicle', 'Day'],
                                            ['Customer', 'Vehicle', 'Day', 'ServiceType'],['ConfigType','Vehicle']), output_tab_names=('Z', 'Y', 'Q','U'))
 # #
 optimize_scenario(scenario, framework_input, io_excel)
 
 # # post processing
-excel_for_processed_data = IOExcel(scenario, root_directory='04-07-IllstrExample', add_to_folder_title='_2',  title_excel_to_create_or_read="DecisionvariableValues_PP.xlsx",
+excel_for_processed_data = IOExcel(scenario, root_directory='07-07-IllstrExample', add_to_folder_title='_2',  title_excel_to_create_or_read="DecisionvariableValues_PP.xlsx",
                      titles_keys_per_dec_var=(['Customer', 'Vehicle', 'Day'], ['O', 'D', 'Vehicle', 'Day'],
                                            ['Customer', 'Vehicle', 'Day', 'ServiceType'],['ConfigType','Vehicle']), output_tab_names=('Z', 'Y', 'Q','U'))
 

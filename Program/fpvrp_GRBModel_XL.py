@@ -226,10 +226,10 @@ class VRP_VBS_Optimizer:
     def __set_valid_inequalities(self):
         ##
         print(" .. setting valid inequalities ...")
-        # valid inequalities
-        self.set_symmetry_breaking_u()
-        self.set_symmetry_breaking_z_1()
-        self.set_symmetry_breaking_z_2()
+        ## valid inequalities
+        #self.set_symmetry_breaking_u()
+        #self.set_symmetry_breaking_z_1()
+        # self.set_symmetry_breaking_z_2()
         # self.set_symmetry_breaking_cx()
         # self.set_ordering_u()
         # self.set_symm_break_lahyani_14()
@@ -300,6 +300,7 @@ class VRP_VBS_Optimizer:
 
     def set_max_dist(self):  # todo => times & limit in config class
         print("set max dist", str(self.cfg.range_limit))
+        print("c: ", self.cfg.c)
         self.mp.addConstrs(quicksum(self.y[i, j, k, t] * self.cfg.c[i, j] for i, j in self.A)
                            <= self.cfg.range_limit for k in self.K for t in self.cfg.T)
 
@@ -326,7 +327,7 @@ class VRP_VBS_Optimizer:
                      in self.A for t in self.cfg.T for k in self.K))
 
     def solve_model(self):
-        self.mp.Params.MIPGap = 0.2
+        self.mp.Params.MIPGap = 0.15
         self.mp.Params.TimeLimit = 43200 # 12 stunden
         self.mp.Params.LazyConstraints = 1
         self.mp.optimize(callback)

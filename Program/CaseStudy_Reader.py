@@ -99,7 +99,7 @@ class Result_Summarizer():
                     # #
                     # add variable costs
                     self.pd_df_summary[c][s_to_string, 'Vr.C.'] = self._get_variable_costs(excel_path, self._get_gis(s))
-                    self.pd_df_summary[c][s_to_string, 'T.Km.'] = self._get_variable_costs(excel_path, self._get_gis(s))
+                    self.pd_df_summary[c][s_to_string, 'T.Km.'] = self._get_km(excel_path, self._get_gis(s))
 
                     # #
                     # get fixed costs
@@ -204,6 +204,14 @@ class Result_Summarizer():
         np_array = np.array(pd.read_excel(path_to_excel, sheet_name='Y')[['O','D']])
         total_dist = 0
         for o_d_pair in np_array:
+            total_dist += input_gis.get_od_to_dist()[o_d_pair[0], o_d_pair[1]] *  0.206 * 20 / 100
+        # print(total_dist)
+        return round(total_dist, num_digits_round)
+
+    def _get_km(self, path_to_excel, input_gis):
+        np_array = np.array(pd.read_excel(path_to_excel, sheet_name='Y')[['O','D']])
+        total_dist = 0
+        for o_d_pair in np_array:
             total_dist += input_gis.get_od_to_dist()[o_d_pair[0], o_d_pair[1]]
         # print(total_dist)
         return round(total_dist, num_digits_round)
@@ -224,7 +232,7 @@ class Result_Summarizer():
         return round(utilization, num_digits_round)
 
 
-Result_Summarizer(folder_name='/Program/04_25_ET',
+Result_Summarizer(folder_name='/Program/05_01_ET_MAThesis',
                   relative_path_to_demand='/GIS_Data/ET_Location_Data.csv',
                   relative_path_to_coors='/GIS_Data/ET_Coordinates.csv',
                   relative_path_to_od_matrix='/GIS_Data/ET_ODs.csv')
