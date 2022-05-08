@@ -332,7 +332,9 @@ class VRP_VBS_Optimizer:
         self.mp.Params.LazyConstraints = 1
         self.mp.optimize(callback)
         print("STATUS : ", self.mp.status)
-        if self.mp.status == GRB.INF_OR_UNBD:
+        if self.mp.objVal == 'inf':
+            print("! no solution found")
+        if self.mp.status == 9 and self.mp.objVal < 1000000:
             return 'NO_GAP'
 
         if self.mp.status == GRB.OPTIMAL:
