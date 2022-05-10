@@ -391,7 +391,10 @@ class VRP_VBS_Optimizer:
         self.mp.Params.TimeLimit = 2000
         self.mp.Params.LazyConstraints = 1
         #self.mp.Params.NonConvex = 2
-        self.mp.optimize()
+        try:
+            self.mp.optimize()
+        except:
+            return 'NO_GAP'
         if self.mp.status == GRB.INF_OR_UNBD:
             return 'NO_GAP'
 
