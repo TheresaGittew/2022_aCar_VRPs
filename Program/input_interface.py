@@ -90,7 +90,7 @@ class DummyForExcelInterface:
         # 20 kWh * 0.206 (Preis einer kwH) je kmw; https://www.german-energy-solutions.de/GES/Redaktion/DE/Publikationen/Marktanalysen/Laenderprofile/elfenbeinkueste.pdf?__blob=publicationFile&v=5
 
         self.fixed_costs = dict((h, 10000 + 2000 * len([i for i in self.Q_h_s[h].values() if i != 0.0])) for h in self.H)
-        self.service_times = {'WDS': 0.0005, 'PNC': 0.25, 'ELEC': (1/60)/200, 'ED': 1/60}
+        self.service_times = {'WDS': 15/3600, 'PNC': 0.25, 'ELEC': (1/60)/200, 'ED': 1/60}
         # #
         # Annahmen: 0.5 h für 1000l Wasser => 0.0005  Min je Service
         # PNC : 15 Minuten (siehe Quelle Internet)

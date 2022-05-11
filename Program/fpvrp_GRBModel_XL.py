@@ -227,8 +227,8 @@ class VRP_VBS_Optimizer:
         ##
         print(" .. setting valid inequalities ...")
         ## valid inequalities
-        #self.set_symmetry_breaking_u()
-        #self.set_symmetry_breaking_z_1()
+        self.set_symmetry_breaking_u()
+        self.set_symmetry_breaking_z_1()
         # self.set_symmetry_breaking_z_2()
         # self.set_symmetry_breaking_cx()
         # self.set_ordering_u()
@@ -327,8 +327,8 @@ class VRP_VBS_Optimizer:
                      in self.A for t in self.cfg.T for k in self.K))
 
     def solve_model(self):
-        self.mp.Params.MIPGap = 0.25
-        self.mp.Params.TimeLimit = 2000 # 12 stunden
+        self.mp.Params.MIPGap = 0.2
+        self.mp.Params.TimeLimit = 30000 # 12 stunden
         self.mp.Params.LazyConstraints = 1
         self.mp.optimize(callback)
         print("STATUS : ", self.mp.status)
@@ -338,7 +338,7 @@ class VRP_VBS_Optimizer:
         if not self.mp.MIPGap == '-':
             print("B! this one worked")
 
-        if self.mp.status == 9 and self.mp.objVal < 1000000:
+        if not self.mp.objVal < 1000000:
             return 'NO_GAP'
 
         if self.mp.status == GRB.OPTIMAL:

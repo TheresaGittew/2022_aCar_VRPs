@@ -21,7 +21,7 @@ class CaseStudy_INPUT():
 
 
 
-    def __init__(self, service_combi, zone_id=0, case_study_type='ET', slice=None, root_directory='05_08_Test_3', customer_fragment=((15, 60), (60, 90), (90,100))):
+    def __init__(self, service_combi, zone_id=0, case_study_type='ET', slice=None, root_directory='05_10', customer_fragment=((0, 60), (60, 90), (90,100))):
         self.separate_runs = customer_fragment
         self.root_directory = root_directory +'_' + case_study_type +'_' + str(zone_id) + '/'
         if slice:
@@ -162,5 +162,5 @@ S_6 = [['WDS','PNC','ELEC','ED']]
 S_test = [['PNC','ELEC']]
 
 for s in S_test:  # adjust set according to relevant run
-    c = CaseStudy_INPUT(s, 0)
+    c = CaseStudy_INPUT(s, 0, 'CI')
 

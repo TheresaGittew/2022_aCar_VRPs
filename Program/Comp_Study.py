@@ -112,6 +112,7 @@ class SpacialStructure():
 
     def _create_Wi(self):
         print(self.demand_height)
+        random.seed(42)
         if self.demand_height == 'HIGH':
             self.demand_range_lb_hg = 50
             self.demand_range_ub_hg = 80
@@ -252,11 +253,12 @@ class Scenario_Creator():
             next_scenario = self.get_next_scenario()
 
         pandas.set_option("display.max_rows", None, "display.max_columns", None)
-        path_to_case_study_output_excel = self.root_directory +'/Program/scenario_'+ self.folder_title + '/' + '_Summary_' + '.xlsx'
+        path_to_case_study_output_excel = self.root_directory +'/scenario_'+ self.folder_title + '/' + '_Summary_' + '.xlsx'
         print(path_to_case_study_output_excel)
         writer = pandas.ExcelWriter(path_to_case_study_output_excel, engine='xlsxwriter')
         pd_df_summary.to_excel(writer, engine='xlsxwriter')
         writer.save()
+        #/Users/theresawettig/PycharmProjects/2022_aCar_VRPs/scenario_05_28_CompExTest_STANDARD_10_Cust_3_Services
 
 
 
@@ -264,7 +266,8 @@ class Scenario_Creator():
     def __init__(self, root_directory, folder_title):
         self.folder_title = folder_title
         self.scenario_count = -1
-        self.root_directory = root_directory
+        self.root_directory = root_directory+'/Program/05_09_CompEx'
+        print(self.root_directory)
 
         # #
         # Parameters to variate in study
@@ -285,9 +288,9 @@ class Scenario_Creator():
         demand_quantities_options = ['HOMOGEN']
         demand_height_options = ['HIGH']
         number_customers = [10]
-        amount_services = [2]
+        amount_services = [3]
         capacity_size_options = ['L']
-        vehicle_num_ubs = [15] #zuvor: 15
+        vehicle_num_ubs = [20] #zuvor: 15
         max_stops = [3]
         instances_per_scen = [i for i in range(20)]
 
@@ -351,6 +354,9 @@ class Scenario_Creator():
 
 #s = Scenario_Creator(_get_root_directory())
 #sub_optimize_scenario(scenario, cfg_params, io_excel)
-Scenario_Creator(_get_root_directory(), '05_28_CompExTest_STANDARD_10_Cust_2_Services').execute_all_scenarios()
+Scenario_Creator(_get_root_directory(), '05_28_CB_10_Cust_3_Services').execute_all_scenarios()
 
 
+
+def read_comp_studies_excel():
+    pass
