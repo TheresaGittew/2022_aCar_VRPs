@@ -327,7 +327,7 @@ class VRP_VBS_Optimizer:
                      in self.A for t in self.cfg.T for k in self.K))
 
     def solve_model(self):
-        self.mp.Params.MIPGap = 0.2
+        self.mp.Params.MIPGap = 0.5
         self.mp.Params.TimeLimit = 30000 # 12 stunden
         self.mp.Params.LazyConstraints = 1
         self.mp.optimize(callback)

@@ -149,7 +149,7 @@ class InputGISReader:
         return self.dict_duration
 
     def get_od_to_dist(self):
-        print(self.dict_distance)
+        #print(self.dict_distance)
         return self.dict_distance
 
 

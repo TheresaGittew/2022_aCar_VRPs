@@ -94,7 +94,8 @@ class VehicleSettings():
 class SpacialStructure():
 
     def __init__(self, num_customers, num_services, cluster_degree_choice=0, demand_q_opt='HOMOGEN', demand_height='HIGH', w_i_choice=0, cluster_degree=(0,1,2),
-                 w_i_options=('EQ_W', 'HALF_W')):
+                 w_i_options=('EQ_W', 'HALF_W'), with_fixed_seed=True):
+        if with_fixed_seed: random.seed(42)
         self.num_customers = num_customers
         self.customers = [i for i in range(self.num_customers)]
         self.cluster_degree = cluster_degree[cluster_degree_choice]
@@ -112,7 +113,7 @@ class SpacialStructure():
 
     def _create_Wi(self):
         print(self.demand_height)
-        random.seed(42)
+
         if self.demand_height == 'HIGH':
             self.demand_range_lb_hg = 50
             self.demand_range_ub_hg = 80
@@ -134,6 +135,10 @@ class SpacialStructure():
                 dict_i_s_to_total_demand = dict(((i, s), random.randint(next(self.demand_range_lb_htg), next(self.demand_range_ub_htg))) for i in self.customers
                                                 for s in range(self.num_services))
 
+        print("Demands:")
+        for k,v in dict_i_s_to_total_demand.items():
+            print("Key : " , k, " |value ",  v)
+
         mean_demand = statistics.mean(list(dict_i_s_to_total_demand.values()))
         mean_deviation = numpy.std(list(dict_i_s_to_total_demand.values()))
         print("mean demand" , mean_demand, " mean deviation : ", mean_deviation)
@@ -150,7 +155,7 @@ class SpacialStructure():
     def _euclidean_distance(self, i,j):
         x_distance = abs(self.coordinates_dict_x[i] - self.coordinates_dict_x[j])
         y_distance = abs(self.coordinates_dict_y[i] - self.coordinates_dict_y[j])
-        print ("euclidean distance : ", round(np.sqrt([x_distance ** 2 + y_distance ** 2])[0],2) * 40)
+       # print ("euclidean distance : ", round(np.sqrt([x_distance ** 2 + y_distance ** 2])[0],2) * 40)
         return round(np.sqrt([x_distance ** 2 + y_distance ** 2])[0] * 40 ,2)
 
     def _create_matrix(self):
@@ -178,7 +183,6 @@ class SpacialStructure():
 
         ##
         # Create Coordinates according to clusters
-
         for i in range(self.num_customers):
 
             # #
@@ -194,7 +198,7 @@ class SpacialStructure():
             y_coor_ub_for_cluster = y_coor_lb_for_cluster + y_coor_width_for_cluster_degree
             dict_i_to_y_coor[i] = random.uniform(y_coor_lb_for_cluster + y_coor_width_for_cluster_degree * 0.2,
                                                  y_coor_ub_for_cluster - y_coor_width_for_cluster_degree * 0.2)
-
+        print("Y_dict" , dict_i_to_y_coor)
         return dict_i_to_x_coor, dict_i_to_y_coor
 
 
@@ -266,33 +270,21 @@ class Scenario_Creator():
     def __init__(self, root_directory, folder_title):
         self.folder_title = folder_title
         self.scenario_count = -1
-        self.root_directory = root_directory+'/Program/05_09_CompEx'
+        self.root_directory = root_directory
         print(self.root_directory)
 
         # #
         # Parameters to variate in study
         demand_cluster_options = [0]
-        demand_quantities_options = ['HOMOGEN']
+        demand_quantities_options = ['HOMOGEN', 'HETEROGENEOUS']
         demand_height_options = ['HIGH', 'LOW']
-        number_customers = [12]
-        amount_services = [2]
+        number_customers = [20]
+        amount_services = [2,3,4]
         capacity_size_options = ['L']
         vehicle_num_ubs = [20]
         max_stops = [3]
+        instances_per_scen = [1]
 
-
-
-        # #
-        # Parameters to variate in study
-        demand_cluster_options = [0]
-        demand_quantities_options = ['HOMOGEN']
-        demand_height_options = ['HIGH']
-        number_customers = [10]
-        amount_services = [3]
-        capacity_size_options = ['L']
-        vehicle_num_ubs = [20] #zuvor: 15
-        max_stops = [3]
-        instances_per_scen = [i for i in range(20)]
 
         self.scenarios = list(itertools.product(demand_cluster_options, demand_quantities_options, demand_height_options,
                                                      number_customers, amount_services, capacity_size_options,
@@ -305,6 +297,34 @@ class Scenario_Creator():
         # Parameters which we don't variate but are fed into the model
         self.T = [i for i in range(5)]
 
+    def save_sampled_locs_and_w(self, W_i, x_coors, y_coors, next_scen_wrapped):
+
+        # #
+        # Prep: unpack next_scenario; hence write necessary info in file name
+        dem_clus_opt, dem_q_opt, dem_h_opt, n_cust, n_serv, cap_size_opt, vehicle_ub, m_stops, instance_no_per_scen = next_scen_wrapped
+
+        string_scenario_info = 'dem_q_opt'+str(dem_q_opt)+'dem_h_opt'+str(dem_h_opt)+'n_cust'+str(n_cust)+'n_serv'+str(n_serv)
+        path_to_case_study_output_excel = self.root_directory + '/scenario_' + self.folder_title + '/' + '_SpacStruc_'+string_scenario_info+'.xlsx'
+        writer = pandas.ExcelWriter(path_to_case_study_output_excel, engine='xlsxwriter')
+
+        # #
+        # Save W
+        pd_df_wi = pandas.DataFrame.from_dict(W_i, orient='index')
+        print(pd_df_wi)
+        pd_df_wi.to_excel(writer, engine='xlsxwriter',sheet_name='W_i')
+
+        # #
+        # X Coors
+        pd_df_x_coors = pandas.DataFrame.from_dict(x_coors, orient='index')
+        pd_df_x_coors.to_excel(writer, engine='xlsxwriter',sheet_name='XCoors')
+
+        # #
+        # y Coors
+        pd_df_y_coors = pandas.DataFrame.from_dict(y_coors, orient='index')
+        pd_df_y_coors.to_excel(writer, engine='xlsxwriter', sheet_name='YCoors')
+        writer.save()
+
+
     def get_next_scenario(self):
         next_scen_wrapped = next(self.scenarios_iter, None)
         if not next_scen_wrapped: return None
@@ -314,7 +334,7 @@ class Scenario_Creator():
 
             # #
             # Create spatial demand structure for current instance
-            sp_dem_strc = SpacialStructure(n_cust, n_serv, dem_clus_opt, dem_q_opt, dem_h_opt, 0)
+            sp_dem_strc = SpacialStructure(n_cust, n_serv, dem_clus_opt, dem_q_opt, dem_h_opt, 0, with_fixed_seed=True)
 
             # #
             # we need scenario object
@@ -323,7 +343,7 @@ class Scenario_Creator():
             # #
             # create cfg object
             services = [i for i in range(n_serv)]
-            service_times = [0.2 for i in services]
+            service_times = [0.1 for i in services]
 
             vehic_settings = VehicleSettings(n_serv,  cap_size_opt)
 
@@ -338,6 +358,8 @@ class Scenario_Creator():
                                                  fixed_costs_h=vehic_settings.fixed_vehicle_costs,
                                                  service_time=service_times,  time_limit=8, stop_limit=m_stops, range_limit=200, cost_factor_per_km=1)
 
+
+
             # Anlegen Excel-Objekt als Handler der Ergebnisse (ohne Nachbearbeitung)
             io_excel = IOExcel(scenario, root_directory=self.root_directory,
                                scenario_id=self.folder_title, add_to_folder_title='',
@@ -346,6 +368,10 @@ class Scenario_Creator():
                                                         ['Customer', 'Vehicle', 'Day', 'ServiceType'],
                                                         ['ConfigType', 'Vehicle']),
                                output_tab_names=('Z', 'Y', 'Q', 'U'))
+            # Speichern der coordinates und des Demands
+            self.save_sampled_locs_and_w(W_i=sp_dem_strc.dict_i_s_to_total_demand,
+                                         x_coors=sp_dem_strc.coordinates_dict_x,
+                                         y_coors=sp_dem_strc.coordinates_dict_y, next_scen_wrapped=next_scen_wrapped)
             self.scenario_count += 1
 
             instance_info = self.scenario_count, next_scen_wrapped, sp_dem_strc
@@ -354,7 +380,7 @@ class Scenario_Creator():
 
 #s = Scenario_Creator(_get_root_directory())
 #sub_optimize_scenario(scenario, cfg_params, io_excel)
-Scenario_Creator(_get_root_directory(), '05_28_CB_10_Cust_3_Services').execute_all_scenarios()
+Scenario_Creator(_get_root_directory()+'/Program/CompExII', '05_16_ExpII').execute_all_scenarios()
 
 
 

@@ -13,7 +13,7 @@ num_digits_round = 2
 
 class Result_Summarizer():
 
-    def __init__(self, folder_name='/Program/04_18_CaseStudy_CI_0_Test',
+    def __init__(self, folder_name='/Program/0_18_CaseStudy_CI_0_Test',
                  relative_path_to_demand = '/GIS_Data/IC_Location_Data.csv',
                  relative_path_to_coors = '/GIS_Data/IC_Coordinates.csv',
                  relative_path_to_od_matrix = '/GIS_Data/IC_ODs.csv', path_to_output = '/Program/CaseStudy_Output'):
