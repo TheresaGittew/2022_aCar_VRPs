@@ -6,6 +6,9 @@ import ExcelHandler as stp_io
 
 index_hub = 100
 
+# #
+# Vizualizer for creating plots that show, for every day, vehicle routes
+
 class PVRP_Vizualizer():
 
     def __init__(self, framework_input, scenario, dicts_to_grb_dataframes_with_multiindex, root_directory_for_saving):
@@ -18,7 +21,7 @@ class PVRP_Vizualizer():
         # #
         # Layout settings
         lis_colors = ['tan', 'dimgrey', 'peru', 'indianred', 'darkkhaki', 'olive','goldenrod','olivedrab','firebrick',
-                      'saddlebrown','teal','cadetblue','darkviolet']
+                      'saddlebrown','teal','cadetblue','darkviolet'] # da wurde energie falsch investiert
         lis_colors_services = iter(cycle(['green', 'navy','crimson','darkorange']))
         self.colors_for_routes = iter(cycle(lis_colors))
         self.colors_for_services = dict((s, next(lis_colors_services)) for s in self.framework_input.S)
@@ -49,9 +52,7 @@ class PVRP_Vizualizer():
                 return []
             if not keyError:
 
-                # returns: [(1, 0, 11, 4), (12, 44, 11, 4),,. (or, dest, vec, day) ...
                 indices_o_d_vehicle_day = df_sub.index.values.tolist()
-               # print(indices_o_d_vehicle_day)
 
                 # only takes the first two elements of each tuple element
                 # returns: {11: (0,1), 11: (1,14), 11: (14, 18), ..}
@@ -71,10 +72,10 @@ class PVRP_Vizualizer():
             except KeyError:
                 entry_available = False
             if entry_available:
-                plt.text(x_cor + 0.03, y_cor + horizontal_space, s=str(s) + ': ' + str(int(q)), # todo:for example change to 0.3
+                plt.text(x_cor + 0.03, y_cor + horizontal_space, s=str(s) + ': ' + str(int(q)), # :for example change to 0.3
                          c=self.colors_for_services[s],
                          alpha=1, fontsize=10)
-                horizontal_space -=  0.03 # 0.3 #todo: change to 0.3 for illst exampl.
+                horizontal_space -=  0.03 # 0.3 #: change to 0.3 for illst exampl.
 
 
     def _plot_routes_for_one_day(self, vehicle_to_routes_current_day):
@@ -170,13 +171,5 @@ class PVRP_Vizualizer():
 
 
 
-
-
-
-
-
-#
-#
-#
 
 

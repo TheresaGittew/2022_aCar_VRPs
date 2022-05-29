@@ -1,9 +1,8 @@
-
-import fpvrp_GRBModel_XL as fpvrps
-import fpvrp_PostProcessing as postprocessor
-from fpvrp_RouteVizualizer import PVRP_Vizualizer
-from fpvrp_ParameterInputClasses import InputGISReader, Scenario
-from ExcelHandler import IOExcel
+import Program.fpvrp_GRBModel_XL as fpvrps
+import Program.fpvrp_PostProcessing  as postprocessor
+from Program.fpvrp_RouteVizualizer import PVRP_Vizualizer
+from Program.fpvrp_ParameterInputClasses import InputGISReader, Scenario
+from Program.ExcelHandler import IOExcel
 
 import random
 from itertools import cycle

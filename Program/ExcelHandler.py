@@ -1,9 +1,10 @@
 import os
-
 import gurobipy
-
 import pandas as pd
-import math
+
+# #
+# Writing results from gurobi to excel or retrieving them
+# Every newly created excel corresponds to one IOExcel Object
 
 class IOExcel:
 
@@ -39,8 +40,6 @@ class IOExcel:
     def _aux_create_df(self, dictionary, title_of_indices):
         df = pd.DataFrame.from_dict(dictionary, orient='index')
         df.reset_index(level=0, inplace=True)
-       # print("Dataframe" , df)
-        #print("Title: ", title_of_indices)
         df[title_of_indices] = pd.DataFrame(df['index'].tolist(), index=df.index)
         df.drop(columns=['index'], inplace=True)
         df.rename(columns={0: 'Value'}, inplace=True)
@@ -120,7 +119,3 @@ class IOExcel:
 
         return dict_decvar_str_to_df
 
-
-
-
-#io_excel = IOExcel()

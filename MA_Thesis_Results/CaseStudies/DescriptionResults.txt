@@ -1,0 +1,18 @@
+Numerical results for CI (Côte d'Ivoire) and Ethiopia (ET):
+
+Sub-folders contain results for one scenario tested.
+Every scenario has a service combination and a specific coverage of the pilot region.
+Folder have the following names:
+
+Example:
+scenario_['ELEC']_12 0.22
+ELEC => Service combination
+12 => # Delivery points in that scenario
+0.22 => Percentage of target area in that scenario
+
+Folders contain these files:
+1) DecisionvariableValues.xlsx => Numerical results for the tested instance;
+every solution variable has one tab, and tab 'obj' Val shows objective value, comp. time [s] and mip gap
+2) DecisionvariableValues_PP.xlsx => Numerical results after post-processing (applied heuristic for finding better routes)
+3).png-files: Plotted Routes for all days + 'PVRP_Day--1': file with active customers
+

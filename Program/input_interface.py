@@ -2,6 +2,57 @@ import pandas
 import os
 import numpy as np
 import itertools
+
+# #
+# Proxy for prospective excel file in which the operator can enter relevant key facts about the fleet
+# Please enter it directly inside the __init__() function.
+
+class DummyForExcelInterface:
+
+    def __init__(self, services):
+
+        # #
+        # *** ENTER INFO HERE ***
+        self.num_days = 5
+        self.T = [i for i in range(self.num_days)]  # number of days in time horizon
+        self.S = services
+
+        # value between 0 and 1 for each service corresponding; corresponding to the share of w_i from W_i
+        self.daily_demand_factors = {'WDS': 1, 'ELEC': 1, 'ED': 1, 'PNC': 1}
+
+        # #
+        # Inputs for consumption function
+        daily_water_consumption_p_P = 3.2
+        handy_battery_duration_in_days = 2
+        ed_services_per_week = 0.25
+        required_visits_per_week = 3 / 52  # 3 services per pregnancy. As we only look at 1 week: /52
+
+
+        # #
+        # These functions are used to map the number of potential customers to the weekly demand values
+        self.functions_to_consumption_per_T = {'WDS': (lambda x: x * daily_water_consumption_p_P * self.num_days),
+                                               'ELEC': (lambda x: (x * self.num_days / handy_battery_duration_in_days)
+                                                                ),
+                                          'ED': (lambda x: x * ed_services_per_week),
+                                               'PNC': (lambda y:  required_visits_per_week * y )}
+
+        # Additional constraint values
+        self.time_limit = 8
+        self.stop_limit = 4
+        self.range_limit = 200
+
+        # # Do nothing here.
+        self.S = services
+        reader = ReaderCapaOptions([self.S])
+
+        self.Q_h_s = reader.get_df() # Vehicle capacities obtained automatically for a given set of services
+        self.H = list(self.Q_h_s.keys()) # Configurations obtained automatically for a given set of services
+
+
+    def get_vehiclecapa_numdays_S(self):
+        return self
+
+
 class ReaderCapaOptions:
 
     def _get_root_directory(self):
@@ -69,60 +120,3 @@ class ReaderCapaOptions:
         # wir brauchen eine funktion, die für jeder möglichen service-kombi die entsprechenden konfigurationen zuordnet
 
 
-
-
-class DummyForExcelInterface:
-
-    def __init__(self, services):
-        self.num_days = 5
-        self.T = [i for i in range(self.num_days)]
-        self.S = services
-
-
-        reader = ReaderCapaOptions([self.S])
-
-        self.Q_h_s = reader.get_df()
-        print(self.Q_h_s)
-        self.H = list(self.Q_h_s.keys())
-
-        self.cost_factor_per_km = 0.206 * 20 / 100
-        # laut evum motors:  Stromverbrauch: 17,5 –19,6 kWh/100 km (https://evum-motors.com/acar-konfigurator/), rounded to 20
-        # 20 kWh * 0.206 (Preis einer kwH) je kmw; https://www.german-energy-solutions.de/GES/Redaktion/DE/Publikationen/Marktanalysen/Laenderprofile/elfenbeinkueste.pdf?__blob=publicationFile&v=5
-
-        self.fixed_costs = dict((h, 10000 + 2000 * len([i for i in self.Q_h_s[h].values() if i != 0.0])) for h in self.H)
-        self.service_times = {'WDS': 15/3600, 'PNC': 0.25, 'ELEC': (1/60)/200, 'ED': 1/60}
-        # #
-        # Annahmen: 0.5 h für 1000l Wasser => 0.0005  Min je Service
-        # PNC : 15 Minuten (siehe Quelle Internet)
-        # ELEC: 1 Minute je Battery Pack
-        # Education: 1 Minute je Buch
-
-        self.daily_demand_factors = {'WDS': 1, 'ELEC': 1, 'ED': 1, 'PNC': 1},
-
-        # #
-        # Inputs for consumption function
-        daily_water_consumption_p_P = 3.2
-        handy_battery_duration_in_days = 2
-
-        ed_services_per_week = 0.25
-        pnc_births_per_women = 4.04 # https://data.worldbank.org/indicator/SP.DYN.TFRT.IN?locations=ET
-        pnc_fertility_span = 30 # number of years a pregant women could get a child
-        required_visits_per_week = 3/52 # 3 services per pregnancy. As we only look at 1 week: /52
-
-
-        # #
-        # These functions are used to map the number of potential customers to the weekly demand values
-        self.functions_to_consumption_per_T = {'WDS': (lambda x: x * daily_water_consumption_p_P * self.num_days),
-                                               'ELEC': (lambda x: (x * self.num_days / handy_battery_duration_in_days)
-                                                                ),
-                                          'ED': (lambda x: x * ed_services_per_week),
-                                               'PNC': (lambda y:  required_visits_per_week * y )}
-        #self.max_num_vehicles = 25
-        self.time_limit = 8
-        self.stop_limit = 4
-        self.range_limit = 200
-
-
-
-    def get_vehiclecapa_numdays_S(self):
-        return self

@@ -1,6 +1,6 @@
 from gurobipy import Model, GRB, quicksum, tuplelist
 from itertools import combinations
-from fpvrp_PostProcessing import RouteValidation
+from Program.fpvrp_PostProcessing import RouteValidation
 import collections
 import math
 
@@ -227,9 +227,9 @@ class VRP_VBS_Optimizer:
         ##
         print(" .. setting valid inequalities ...")
         # valid inequalities
-        self.set_symmetry_breaking_u()
-        self.set_symmetry_breaking_z_1()
-        self.set_symmetry_breaking_z_2()
+        #self.set_symmetry_breaking_u()
+        #self.set_symmetry_breaking_z_1()
+        #self.set_symmetry_breaking_z_2()
         # self.set_symmetry_breaking_cx()
         # self.set_ordering_u()
         # self.set_symm_break_lahyani_14()
@@ -387,15 +387,15 @@ class VRP_VBS_Optimizer:
             quicksum(self.y[i, j, k, t] * self.cfg.c[i, j] * 0.5 for (i, j) in self.A for t in self.cfg.T for k in self.K))
 
     def solve_model(self):
-        self.mp.Params.MIPGap = 0.5
-        self.mp.Params.TimeLimit = 2000
+        self.mp.Params.MIPGap = 0.25
+        self.mp.Params.TimeLimit = 4000
         self.mp.Params.LazyConstraints = 1
         #self.mp.Params.NonConvex = 2
         try:
             self.mp.optimize()
         except:
             return 'NO_GAP'
-        if self.mp.status == GRB.INF_OR_UNBD:
+        if not self.mp.objVal < 1000000:
             return 'NO_GAP'
 
         if self.mp.status == GRB.OPTIMAL:

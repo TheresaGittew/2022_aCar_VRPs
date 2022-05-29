@@ -4,8 +4,6 @@ import numpy as np
 import random
 index_hub = 100
 
-# real set:
-# {'WDS': (lambda x: x * 0.25),'ELEC': (lambda x: x * 0.25),'ED': (lambda x: x * 0.25),'PNC': (lambda y: y * 3 / 52)}
 
 class InputGISReader:
 
@@ -24,14 +22,12 @@ class InputGISReader:
         # extract results
         self._get_root_directory()
 
-        self._read_coordinates()
+        self._read_coordinates() # read GIS coordinates from .csv
+        self._read_matrix() # read GIS matrix from .csv
+        self._read_demand_data() # read GIS population count from .csv
+        self._map_demand_data()  # manipulate the GIS population count to create W_i
 
-        self._read_matrix()
-        #self._create_matrix()
-
-        self._read_demand_data()
-        self._map_demand_data()
-        self._create_daily_demands()
+        self._create_daily_demands() # compute w_i based on W_i
 
     def get_customers(self):
         return self.customers
@@ -41,8 +37,6 @@ class InputGISReader:
         root_directory_program = os.path.dirname(os.path.abspath("README.md")) # for example: /Users/theresawettig/PycharmProjects/2022_aCar_VRPs/Program
         self.root_directory_project = os.path.dirname(root_directory_program)
 
-    #
-    # important: demand_type_names order has to match the order in the .csv file
     def _read_demand_data(self):
 
         path_to_real_demand = self.root_directory_project + self.rltv_path_to_demand
@@ -89,12 +83,8 @@ class InputGISReader:
         return self.dict_i_s_to_total_demand
 
     def _create_daily_demands(self):
-        #print(self.daily_demand_factors)
         self.dict_i_s_to_daily_demand = dict(((cust, service), v * self.daily_demand_factors[service])
                                              for (cust, service), v in self.dict_i_s_to_total_demand.items())
-        #print("total demands , ", self.dict_i_s_to_total_demand)
-      #  print("\n \n")
-        #print("daily demands" ,self.dict_i_s_to_daily_demand)
 
     def get_daily_demands(self):
         return self.dict_i_s_to_daily_demand
@@ -120,8 +110,6 @@ class InputGISReader:
         # 1: Remove all links that connect a node to itself (otherwise the model picks these connections only)
         relevant_indices = pd_ods.index[(pd_ods['FROM_ID'] == pd_ods['TO_ID'])]
         pd_ods = pd_ods.drop(index=relevant_indices)
-
-
 
         # 2. Transform dataframe so we can easily convert it to a dictionary
         pd_ods_with_ind = pd_ods.set_index(['FROM_ID','TO_ID'])
@@ -149,7 +137,6 @@ class InputGISReader:
         return self.dict_duration
 
     def get_od_to_dist(self):
-        #print(self.dict_distance)
         return self.dict_distance
 
 

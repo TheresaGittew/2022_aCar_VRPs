@@ -5,42 +5,23 @@ from fpvrp_ParameterInputClasses import InputGISReader
 from Execute import execute_scenario
 import random
 import itertools
-import pandas as pd
-import os
-import xlsxwriter
 
-
-def get_root_directory():
-    root_directory_program = os.path.dirname(
-        os.path.abspath("README.md"))  # for example: /Users/theresawettig/PycharmProjects/2022_aCar_VRPs/Program
-    root_directory = os.path.dirname(root_directory_program)
-    return root_directory
+# #
+# Auxiliary class used for Master Thesis to generate scenarios for Case Studies
+# As shown at the bottom of file, simply specify a service combination and execute this file
+index_hub = 100
 
 class CaseStudy_INPUT():
 
-    def _get_num_vec_ub(self, service_combi, input_gis, customer_list, input_interface):
-        Q_s_max= {'PNC':40, 'WDS':1000, 'ELEC': 5406, 'ED':4000}
-        num_vehicles_required = 0
-        for s in service_combi:
-            max_needed_vecs_for_s = sum([input_gis.get_total_demands()[i, s] for i in customer_list]) # berechne Gesamtnachfrage für aktuellen Service
-            max_needed_vecs_for_s = max_needed_vecs_for_s / len(input_interface.T)
-            max_needed_vecs_for_s = int(np.ceil( max_needed_vecs_for_s * 2 / Q_s_max[s]) * 3)
-            num_vehicles_required += max_needed_vecs_for_s
-        return num_vehicles_required
-
-
-
-    def __init__(self, service_combi, zone_id=0, case_study_type='ET', slice=None, root_directory='05_03', customer_fragment=((0, 60), (60, 90), (90,100))):
+    # # service combi => tested service combination; area_size_category = 0 -> roughly the size of tested problems, type 0 for small-medium instances
+    # tested for the master thesis; 1 and 2 could (potentially) be used to compute even larger sets
+    def __init__(self, service_combi, area_size_category=0, case_study_type='ET', slice=None, root_directory='05_10',
+                 customer_fragment=((0, 60), (60, 90), (90, 100))):
         self.separate_runs = customer_fragment
-        self.root_directory = root_directory +'_' + case_study_type +'_' + str(zone_id) + '/'
+        self.root_directory = root_directory +'_' + case_study_type +'_' + str(area_size_category) + '/'
         if slice:
-            self.root_directory = root_directory +'_Slice_' + case_study_type +'_' + str(zone_id) + '/'
+            self.root_directory = root_directory +'_Slice_' + case_study_type +'_' + str(area_size_category) + '/'
         if case_study_type == 'ET':
-            self.service_combis = [service_combi] # [ ['PNC', 'ELEC'],
-                                  # ['PNC', 'ED'], ['ELEC', 'ED'],
-                                 # ['PNC', 'ELEC', 'ED'], ['WDS','PNC'], ['WDS','ELEC'],
-                                 #  ['WDS', 'ED'], ['WDS', 'PNC','ELEC'], ['WDS', 'PNC', 'ED'],
-                                 #  ['WDS','ELEC','ED'], ['WDS','PNC','ELEC','ED'], ['PNC'], ['ELEC'], ['ED'],]
             self.relative_path_to_demand = '/GIS_Data/ET_Location_Data.csv'
             self.relative_path_to_coors = '/GIS_Data/ET_Coordinates.csv'
             self.relative_path_to_od_matrix = '/GIS_Data/ET_ODs.csv'
@@ -50,10 +31,10 @@ class CaseStudy_INPUT():
             self.relative_path_to_od_matrix = '/GIS_Data/IC_ODs.csv'
 
         set_provided_services = service_combi
-        lower_bound_ringarea = customer_fragment[zone_id][0] / 100
-        upper_bound_ringarea = customer_fragment[zone_id][1] / 100
+        lower_bound_ringarea = customer_fragment[area_size_category][0] / 100
+        upper_bound_ringarea = customer_fragment[area_size_category][1] / 100
 
-        # step 1: go through all service combinations
+        # Step 1: go through all service combinations
         #
         input_interface = DummyForExcelInterface(set_provided_services).get_vehiclecapa_numdays_S()
         input_gis = InputGISReader(input_interface.daily_demand_factors[0],
@@ -64,18 +45,14 @@ class CaseStudy_INPUT():
                                    services=set_provided_services)
 
 
-        # 2. Customer Scenarios
+        # 2. Identify all customer scenarios (different sets of customers to be studied)
         distance_limits, customer_groups_shuffled = generate_relevant_customers(input_gis) if not slice else generate_relevant_customers(input_gis, slice)
         customer_scen_id_to_customer_list, customer_scen_id_to_coverage = create_customer_sets(distance_limits,
                                                                                                customer_groups_shuffled,
                                                                                                len(input_gis.customers)) if not slice else create_customer_sets(distance_limits,
                                                                                                customer_groups_shuffled, len(slice))
-        # # set up pandas
-        a = pd.DataFrame( columns=['WDS','PNC','ED','ELEC'])
-
 
         count_three = itertools.cycle([1, 2, 3])
-        next_count = next(count_three)
         for customer_scenario_id, customer_lis in customer_scen_id_to_customer_list.items():
             # # only calculate every third scenario this time
 
@@ -85,48 +62,27 @@ class CaseStudy_INPUT():
                       " % Points (from tot. Area) ",  percentage, " | Customer Id : ", customer_scenario_id)
 
 
-               # print("total demand ELEC ", sum(input_gis.get_total_demands()[i, 'ELEC'] for i in customer_lis))
-               # print("Capacities: ", input_interface.Q_h_s)
-                if next_count == 1:
-                    WDS_DEM = round(sum([input_gis.get_total_demands()[i, s] for i in customer_lis for s in ['WDS']]), 2)
-                    ELEC_DEM = round(sum([input_gis.get_total_demands()[i, s] for i in customer_lis for s in ['ELEC']]), 2)
-                    ED_DEM = sum([input_gis.get_total_demands()[i, s] for i in customer_lis for s in ['ED']])
-                    PNC_DEM = sum([input_gis.get_total_demands()[i, s] for i in customer_lis for s in ['PNC']])
-                    ds = pd.DataFrame([[WDS_DEM, PNC_DEM, ED_DEM, ELEC_DEM]], columns=['WDS', 'PNC', 'ED', 'ELEC'])
-                    a = a.append(other=ds, ignore_index=True)
-                    print(a)
-
                 next_count = next(count_three)
-                #print(ds)
+                number_vehicles = self._get_num_vec_ub(service_combi, input_gis, customer_lis, input_interface)
+                if next_count == 1:
+                    execute_scenario(relevant_customers=customer_lis, number_vehicles=number_vehicles,
+                                    input_interface=input_interface,
+                                    input_gis=input_gis, root_directory=self.root_directory,
+                                    customer_scenario=customer_scenario_id, services_scenario=set_provided_services, percentage=round(percentage,2))
 
-
-        #print(a)
-
-        path_to_excel = get_root_directory() + '/Program/Z.xlsx'
-        writer = pd.ExcelWriter(path_to_excel, engine='xlsxwriter')
-        a.to_excel(writer, engine='xlsxwriter', sheet_name='Tests')
-        writer.save()
-
-
-
-
-
-                #number_vehicles = self._get_num_vec_ub(service_combi, input_gis, customer_lis, input_interface)
-                #print("UB vehicles: ", number_vehicles)
-                #if next_count == 1:
-                    #execute_scenario(relevant_customers=customer_lis, number_vehicles=number_vehicles,
-                    #                 input_interface=input_interface,
-                    #                 input_gis=input_gis, root_directory=self.root_directory,
-                    #                 customer_scenario=customer_scenario_id, services_scenario=set_provided_services, percentage=round(percentage,2))
+    def _get_num_vec_ub(self, service_combi, input_gis, customer_list, input_interface):
+        Q_s_max = {'PNC': 40, 'WDS': 1000, 'ELEC': 5406, 'ED': 4000}
+        num_vehicles_required = 0
+        for s in service_combi:
+            max_needed_vecs_for_s = sum([input_gis.get_total_demands()[i, s] for i in
+                                         customer_list])  # berechne Gesamtnachfrage für aktuellen Service
+            max_needed_vecs_for_s = max_needed_vecs_for_s / len(input_interface.T)
+            max_needed_vecs_for_s = int(np.ceil(max_needed_vecs_for_s * 2 / Q_s_max[s]) * 3)
+            num_vehicles_required += max_needed_vecs_for_s
+        return num_vehicles_required
 
 
 
-
-
-
-index_hub = 100
-
-# sukkzesives Hinzufügen von customers
 def generate_relevant_customers(input_gis, slice=None):
     distance_categories = []
     max_distance_to_hub_ceil = np.ceil(max(input_gis.get_od_to_dist()[100, c] for c in input_gis.get_customers()))
@@ -165,7 +121,7 @@ def generate_relevant_customers(input_gis, slice=None):
 
 def create_customer_sets(distance_limits, customer_groups_shuffled, total_numb_customer):
     distance_limits_copy = distance_limits.copy()
-    distance_limits_copy.reverse() #  returns for example [65.0, 54.166, 43.33, 32.5, 21.68, 10.83333, 0.0]
+    distance_limits_copy.reverse()
     customer_scenarios = []
 
     for current_distance_ub in distance_limits_copy[:-1]: # takes 65. first, then 54, then 43 ....
@@ -185,16 +141,16 @@ def create_customer_sets(distance_limits, customer_groups_shuffled, total_numb_c
 
     return customer_scen_id_to_customer_list, customer_scen_id_to_coverage
 
-CaseStudy_INPUT(['WDS','PNC','ED','ELEC'])
 
-# S_1 = [['PNC'], ['WDS'], ['ELEC'],['ED']]
-# S_2 = [['WDS', 'ED'], ['WDS','ELEC']]
-# S_3 = [['PNC','ELEC'], ['PNC','ED'], ['ELEC','ED']]
-# S_4 = [['WDS','PNC','ELEC'], ['WDS','PNC','ED']]
-# S_5 = [['WDS','ELEC','ED'], ['PNC','ELEC','ED']]
-# S_6 = [['WDS','PNC','ELEC','ED']]
-# S_test = [['PNC','ED']]
-#
-# for s in S_test:  # adjust set according to relevant run
-#     c = CaseStudy_INPUT(s, 0)
+
+S_1 = [['PNC'], ['WDS'], ['ELEC'],['ED']]
+S_2 = [['WDS', 'ED'], ['WDS','ELEC']]
+S_3 = [['PNC','ELEC'], ['PNC','ED'], ['ELEC','ED']]
+S_4 = [['WDS','PNC','ELEC'], ['WDS','PNC','ED']]
+S_5 = [['WDS','ELEC','ED'], ['PNC','ELEC','ED']]
+S_6 = [['WDS','PNC','ELEC','ED']]
+S_test = [['PNC','ELEC']]
+
+for s in S_test:  # adjust set according to relevant run
+    c = CaseStudy_INPUT(s, 0, 'CI')
 

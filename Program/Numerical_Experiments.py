@@ -8,14 +8,17 @@ import os
 import pandas
 import statistics
 import numpy
-
 from Execute import sub_optimize_scenario
 
 index_hub = 100
 
 # #
-# What we have to define:
-# Number of configuration options
+# Some method specifically used for the numerical experiments as a part of the master thesis
+# # Create a ScenarioCreator Object and call method "execute_all_scenarios()" to perform model runs for all defined
+# scenario combinations
+# Go to line ~240 to see how different parameter to study can be defined
+# Then, run this file.
+
 
 # Get root directory
 def _get_root_directory():
@@ -23,12 +26,17 @@ def _get_root_directory():
         os.path.abspath("README.md"))  # for example: /Users/theresawettig/PycharmProjects/2022_aCar_VRPs/Program
     return os.path.dirname(root_directory_program)
 
+# #
+# Generator of Vehicle-related Input Parameter for the numerical experiments
+# For a given set of services (a number of services), and a specific option for the capacity sice (capa_size_opt),
+# either 'L' or 'S', VehicleSettings() produces parameters configurations and related capacities. Usually
+# automatically called from within the ScenarioCreator() class
+
 class VehicleSettings():
 
     def __init__(self, num_services, capa_size_opt):
 
         self.capa_size = capa_size_opt
-        #self.capa_struct = capa_structure_options[capa_structure_opt_choice]
         self.services = [s for s in range(num_services)]
 
         # #
@@ -50,7 +58,6 @@ class VehicleSettings():
 
         self.H = [i for i in range(len(all_combis))]
         services_per_combi = dict((i, len(all_combis[i])) for i in range(len(all_combis)))
-        # print("services per combi : ", all_combis)
         self.Q_h_s = {}
 
         combi_counter = 0
@@ -65,9 +72,7 @@ class VehicleSettings():
                 else:
                     self.Q_h_s[h][s] = 0
             combi_counter += 1
-        print(self.Q_h_s)
         self.fixed_vehicle_costs = self._generate_vehicle_costs()
-        print(self.fixed_vehicle_costs)
 
     def get_Q_h_s(self):
         return self.Q_h_s
@@ -85,11 +90,12 @@ class VehicleSettings():
             dict_config_to_costs[h] = 10000 + 2000 * num_services_current_config
         return dict_config_to_costs
 
-
-
-#vs = VehicleSettings(4, 0)
-#print(vs.get_Q_h_s())
-
+# #
+# Generator of a Spatial Structure for the Numerical Study
+# Specify num_customers (number customers), number services, cluster degree (between 0 and 2), demand level (demand_height),
+# demand quantity option (homogen / heterogen), or w_i ('EQ_W','HALF_W) as a fraction of W_i to produce a
+# specific Spatial structure
+# Usually, that class is automatically called by class ScenarioCreator()
 
 class SpacialStructure():
 
@@ -155,7 +161,6 @@ class SpacialStructure():
     def _euclidean_distance(self, i,j):
         x_distance = abs(self.coordinates_dict_x[i] - self.coordinates_dict_x[j])
         y_distance = abs(self.coordinates_dict_y[i] - self.coordinates_dict_y[j])
-       # print ("euclidean distance : ", round(np.sqrt([x_distance ** 2 + y_distance ** 2])[0],2) * 40)
         return round(np.sqrt([x_distance ** 2 + y_distance ** 2])[0] * 40 ,2)
 
     def _create_matrix(self):
@@ -198,22 +203,14 @@ class SpacialStructure():
             y_coor_ub_for_cluster = y_coor_lb_for_cluster + y_coor_width_for_cluster_degree
             dict_i_to_y_coor[i] = random.uniform(y_coor_lb_for_cluster + y_coor_width_for_cluster_degree * 0.2,
                                                  y_coor_ub_for_cluster - y_coor_width_for_cluster_degree * 0.2)
-        print("Y_dict" , dict_i_to_y_coor)
         return dict_i_to_x_coor, dict_i_to_y_coor
 
 
 class Scenario():
 
-    # def find_relevant_customers(arcs_list, customer_num, min_distance_bekoji, max_distance_bekoji):
-    #     lis = [c for c in range(1, customer_num) if
-    #            arcs_list[0, c][1] > min_distance_bekoji and arcs_list[0, c][1] < max_distance_bekoji]
-    #     return lis
-
     def __init__(self, number_vehicles, relevant_customers): # todo remove T
         self.num_vecs = number_vehicles
-
         self.C = relevant_customers #[c for c in GIS_inputs.get_customers() if GIS_inputs.get_od_to_dist()[100, c] > lower_bound and GIS_inputs.get_od_to_dist()[100, c] < upper_bound]
-
         self.N = [index_hub] + self.C
         self.K = [k for k in range(self.num_vecs)]
         self.A = [(i,j) for i in self.N for j in self.N if i != j]
@@ -231,6 +228,34 @@ class Scenario_Creator():
         pd_df_summary = pandas.DataFrame(np.zeros(( len(self.scenarios),len(self.pd_cols))), index=pd_index, columns=self.pd_cols)
         return pd_df_summary
 
+    def __init__(self, root_directory, folder_title):
+        self.folder_title = folder_title
+        self.scenario_count = -1
+        self.root_directory = root_directory
+
+        # #
+        # DEFINE the parameters to be studied HERE!;
+
+        demand_cluster_options = [0] # options: [0,1,2]
+        demand_quantities_options = ['HOMOGEN', 'HETEROGENEOUS'] # options: ['HOMOGEN', 'HETEROGENEOUS']
+        demand_height_options = ['HIGH'] # options: ['HIGH', 'LOW']
+        number_customers = [10]
+        amount_services = [2, 3]
+        capacity_size_options = ['L'] # options: ['S','L']
+        vehicle_num_ubs = [20]
+        max_stops = [3]
+        instances_per_scen = [i for i in range (20)]
+        self.fixed_seed = False
+
+        self.scenarios = list(itertools.product(demand_cluster_options, demand_quantities_options, demand_height_options,
+                                                     number_customers, amount_services, capacity_size_options,
+                                                     vehicle_num_ubs, max_stops, instances_per_scen))
+
+        self.scenarios_iter = iter(self.scenarios)
+        # #
+        # Parameters which we don't variate but are fed into the model
+        self.T = [i for i in range(5)]
+
 
     def execute_all_scenarios(self):
         pd_df_summary = self._create_pandas_summary_skeleton()
@@ -241,8 +266,6 @@ class Scenario_Creator():
             (scen_count, next_scen_wrapped, sp_dem_strc), scenario, cfg_params, io_excel = next_scenario
 
             objVal, runtime, gap = sub_optimize_scenario(scenario, cfg_params, io_excel)
-
-
 
             # #
             # save details about current scenario
@@ -258,44 +281,11 @@ class Scenario_Creator():
 
         pandas.set_option("display.max_rows", None, "display.max_columns", None)
         path_to_case_study_output_excel = self.root_directory +'/scenario_'+ self.folder_title + '/' + '_Summary_' + '.xlsx'
-        print(path_to_case_study_output_excel)
         writer = pandas.ExcelWriter(path_to_case_study_output_excel, engine='xlsxwriter')
         pd_df_summary.to_excel(writer, engine='xlsxwriter')
         writer.save()
-        #/Users/theresawettig/PycharmProjects/2022_aCar_VRPs/scenario_05_28_CompExTest_STANDARD_10_Cust_3_Services
 
 
-
-
-    def __init__(self, root_directory, folder_title):
-        self.folder_title = folder_title
-        self.scenario_count = -1
-        self.root_directory = root_directory
-        print(self.root_directory)
-
-        # #
-        # Parameters to variate in study
-        demand_cluster_options = [0]
-        demand_quantities_options = ['HOMOGEN', 'HETEROGENEOUS']
-        demand_height_options = ['HIGH', 'LOW']
-        number_customers = [20]
-        amount_services = [2,3,4]
-        capacity_size_options = ['L']
-        vehicle_num_ubs = [20]
-        max_stops = [3]
-        instances_per_scen = [1]
-
-
-        self.scenarios = list(itertools.product(demand_cluster_options, demand_quantities_options, demand_height_options,
-                                                     number_customers, amount_services, capacity_size_options,
-                                                     vehicle_num_ubs, max_stops, instances_per_scen))
-        print(self.scenarios)
-
-        self.scenarios_iter = iter(self.scenarios)
-
-        # #
-        # Parameters which we don't variate but are fed into the model
-        self.T = [i for i in range(5)]
 
     def save_sampled_locs_and_w(self, W_i, x_coors, y_coors, next_scen_wrapped):
 
@@ -324,6 +314,9 @@ class Scenario_Creator():
         pd_df_y_coors.to_excel(writer, engine='xlsxwriter', sheet_name='YCoors')
         writer.save()
 
+    # #
+    # Aux Method which retrieves the next scenario from class object "self.scenarios" and
+    # Generates all required parameters for that scenario to prepare it for a model run
 
     def get_next_scenario(self):
         next_scen_wrapped = next(self.scenarios_iter, None)
@@ -334,7 +327,7 @@ class Scenario_Creator():
 
             # #
             # Create spatial demand structure for current instance
-            sp_dem_strc = SpacialStructure(n_cust, n_serv, dem_clus_opt, dem_q_opt, dem_h_opt, 0, with_fixed_seed=True)
+            sp_dem_strc = SpacialStructure(n_cust, n_serv, dem_clus_opt, dem_q_opt, dem_h_opt, 0, with_fixed_seed=self.fixed_seed)
 
             # #
             # we need scenario object
@@ -358,9 +351,7 @@ class Scenario_Creator():
                                                  fixed_costs_h=vehic_settings.fixed_vehicle_costs,
                                                  service_time=service_times,  time_limit=8, stop_limit=m_stops, range_limit=200, cost_factor_per_km=1)
 
-
-
-            # Anlegen Excel-Objekt als Handler der Ergebnisse (ohne Nachbearbeitung)
+            # Create Excel Handler for current scenario
             io_excel = IOExcel(scenario, root_directory=self.root_directory,
                                scenario_id=self.folder_title, add_to_folder_title='',
                                title_excel_to_create_or_read="Com_Ex"+str(self.scenario_count)+"_DecisionvariableValues.xlsx",
@@ -368,21 +359,16 @@ class Scenario_Creator():
                                                         ['Customer', 'Vehicle', 'Day', 'ServiceType'],
                                                         ['ConfigType', 'Vehicle']),
                                output_tab_names=('Z', 'Y', 'Q', 'U'))
-            # Speichern der coordinates und des Demands
+
+            # Safe demand data
             self.save_sampled_locs_and_w(W_i=sp_dem_strc.dict_i_s_to_total_demand,
                                          x_coors=sp_dem_strc.coordinates_dict_x,
                                          y_coors=sp_dem_strc.coordinates_dict_y, next_scen_wrapped=next_scen_wrapped)
             self.scenario_count += 1
 
             instance_info = self.scenario_count, next_scen_wrapped, sp_dem_strc
-
             return instance_info, scenario, cfg_params, io_excel
 
-#s = Scenario_Creator(_get_root_directory())
-#sub_optimize_scenario(scenario, cfg_params, io_excel)
-Scenario_Creator(_get_root_directory()+'/Program/CompExII', '05_16_ExpII').execute_all_scenarios()
 
+Scenario_Creator(_get_root_directory()+'/Program', '05_24_ExpI').execute_all_scenarios()
 
-
-def read_comp_studies_excel():
-    pass
